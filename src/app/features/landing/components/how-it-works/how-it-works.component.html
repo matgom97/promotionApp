@@ -1,0 +1,73 @@
+<section
+  id="como-funciona"
+  class="how-it-works section"
+>
+
+  <div class="container">
+
+    <!-- Header -->
+
+    <div class="how-it-works__header">
+
+      <span class="how-it-works__eyebrow">
+        CÓMO FUNCIONA
+      </span>
+
+      <h2>
+        Empieza en minutos,
+        <span>sin complicaciones</span>
+      </h2>
+
+      <p>
+        Desde la creación de tu promoción hasta el análisis de resultados,
+        todo sucede desde un mismo lugar.
+      </p>
+
+    </div>
+
+
+    <!-- Steps -->
+
+    <div class="how-it-works__steps">
+
+      @for (step of steps; track step.number; let last = $last) {
+
+        <div class="how-it-works__step-wrapper">
+
+          <article class="step">
+
+            <div class="step__number">
+              {{ step.number }}
+            </div>
+
+            <div class="step__icon">
+              {{ step.icon }}
+            </div>
+
+            <h3>
+              {{ step.title }}
+            </h3>
+
+            <p>
+              {{ step.description }}
+            </p>
+
+          </article>
+
+          @if (!last) {
+
+            <div class="how-it-works__connector">
+              <span>→</span>
+            </div>
+
+          }
+
+        </div>
+
+      }
+
+    </div>
+
+  </div>
+
+</section>

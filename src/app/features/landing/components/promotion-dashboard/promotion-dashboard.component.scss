@@ -1,0 +1,238 @@
+.promotion-dashboard {
+  background: var(--color-background-soft);
+}
+
+/* =========================================================
+   PROMOTION DASHBOARD HEADER
+   ========================================================= */
+   .promotion-dashboard__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: var(--space-8);
+
+  margin-bottom: var(--space-8);
+}
+
+.promotion-dashboard__eyebrow {
+  display: block;
+
+  margin-bottom: var(--space-3);
+
+  color: var(--color-primary-500);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.5px;
+}
+
+.promotion-dashboard__header h2 {
+  max-width: 650px;
+
+  font-size: var(--font-size-4xl);
+}
+
+.promotion-dashboard__header h2 span {
+  color: var(--color-primary-500);
+}
+
+.promotion-dashboard__header p {
+  max-width: 620px;
+
+  margin-top: var(--space-4);
+
+  color: var(--color-text-secondary);
+
+  font-size: var(--font-size-lg);
+}
+
+
+/* =========================================================
+    Badge
+    ========================================================= */
+
+    .promotion-dashboard__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  padding: 8px 12px;
+
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-full);
+
+  color: var(--color-success);
+
+  background: var(--color-success-light);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+
+  white-space: nowrap;
+}
+
+.promotion-dashboard__badge span {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: var(--color-success);
+}
+
+
+
+
+.promotion-dashboard__panel {
+  padding: var(--space-7);
+
+  background: var(--color-background);
+
+  border: 1px solid var(--color-border);
+
+  border-radius: var(--radius-2xl);
+
+  box-shadow: var(--shadow-lg);
+}
+
+
+
+.promotion-dashboard__panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: var(--space-6);
+}
+
+.promotion-dashboard__panel-header h3 {
+  font-size: var(--font-size-lg);
+}
+
+.promotion-dashboard__panel-header span {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(--color-text-muted);
+
+  font-size: var(--font-size-xs);
+}
+
+.promotion-dashboard__panel-header button {
+  border: 0;
+  background: transparent;
+
+  color: var(--color-primary-500);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.promotion-dashboard__panel-header button:hover {
+  color: var(--color-primary-700);
+}
+
+
+
+.promotion-dashboard__cards {
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: var(--space-5);
+}
+
+
+
+
+.promotion-dashboard__summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+
+  border-top: 1px solid var(--color-border-light);
+}
+
+.promotion-dashboard__summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  padding: 0 var(--space-5);
+
+  border-right: 1px solid var(--color-border-light);
+}
+
+.promotion-dashboard__summary > div:first-child {
+  padding-left: 0;
+}
+
+.promotion-dashboard__summary > div:last-child {
+  border-right: none;
+}
+
+.promotion-dashboard__summary span {
+  color: var(--color-text-muted);
+
+  font-size: var(--font-size-xs);
+}
+
+.promotion-dashboard__summary strong {
+  color: var(--color-text-primary);
+
+  font-size: var(--font-size-xl);
+}
+
+.promotion-dashboard__summary-highlight strong {
+  color: var(--color-success);
+}
+
+
+
+
+@media (max-width: 992px) {
+  .promotion-dashboard__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .promotion-dashboard__cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .promotion-dashboard__header h2 {
+    font-size: var(--font-size-3xl);
+  }
+
+  .promotion-dashboard__header p {
+    font-size: var(--font-size-md);
+  }
+
+  .promotion-dashboard__panel {
+    padding: var(--space-5);
+  }
+
+  .promotion-dashboard__summary {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  .promotion-dashboard__summary > div,
+  .promotion-dashboard__summary > div:first-child {
+    padding: 0 0 var(--space-5);
+
+    border-right: none;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  .promotion-dashboard__summary > div:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}

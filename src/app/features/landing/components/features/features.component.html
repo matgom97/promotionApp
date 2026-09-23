@@ -1,0 +1,58 @@
+<section
+  id="funciones"
+  class="features section"
+>
+
+  <div class="container">
+
+    <!-- Header -->
+    <div class="features__header">
+
+      <span class="features__eyebrow">
+        TODO EN UN SOLO LUGAR
+      </span>
+
+      <h2>
+        Todo lo que necesitas
+        <span>para vender más</span>
+      </h2>
+
+      <p>
+        Herramientas simples para crear promociones,
+        atraer clientes y medir los resultados de cada campaña.
+      </p>
+
+    </div>
+
+    <!-- Features -->
+    <div class="features__grid">
+
+      @for (feature of features; track feature.title) {
+
+        <article class="feature-card">
+
+          <div class="feature-card__icon">
+            {{ feature.icon }}
+          </div>
+
+          <div class="feature-card__content">
+
+            <h3>
+              {{ feature.title }}
+            </h3>
+
+            <p>
+              {{ feature.description }}
+            </p>
+
+          </div>
+
+        </article>
+
+      }
+
+    </div>
+
+  </div>
+
+</section>

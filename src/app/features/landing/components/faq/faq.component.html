@@ -1,0 +1,74 @@
+<section
+  id="preguntas"
+  class="faq section"
+>
+
+  <div class="container">
+
+    <div class="faq__header">
+
+      <span class="faq__eyebrow">
+        PREGUNTAS FRECUENTES
+      </span>
+
+      <h2>
+        Todo lo que necesitas
+        <span>saber</span>
+      </h2>
+
+      <p>
+        Resolvemos las preguntas más comunes sobre
+        promociones, canjes y gestión de restaurantes.
+      </p>
+
+    </div>
+
+
+    <div class="faq__list">
+
+      @for (faq of faqs; track faq.question; let i = $index) {
+
+        <article
+          class="faq-item"
+          [class.faq-item--open]="openIndex === i"
+        >
+
+          <button
+            type="button"
+            class="faq-item__question"
+            [attr.aria-expanded]="openIndex === i"
+            (click)="toggle(i)"
+          >
+
+            <span>
+              {{ faq.question }}
+            </span>
+
+            <span class="faq-item__icon">
+              {{ openIndex === i ? '−' : '+' }}
+            </span>
+
+          </button>
+
+
+          @if (openIndex === i) {
+
+            <div class="faq-item__answer">
+
+              <p>
+                {{ faq.answer }}
+              </p>
+
+            </div>
+
+          }
+
+        </article>
+
+      }
+
+    </div>
+
+  </div>
+
+</section>

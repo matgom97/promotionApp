@@ -1,0 +1,47 @@
+<header class="navbar">
+  <div class="navbar__container">
+
+    <!-- Logo -->
+    <a class="navbar__brand" routerLink="/">
+      <div class="navbar__logo">
+        ♨
+      </div>
+
+      <span class="navbar__name">
+        Promo<span>Table</span>
+      </span>
+    </a>
+
+    <!-- Navegación -->
+    <nav class="navbar__links">
+      <a href="#funciones">Funciones</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#precios">Precios</a>
+      <a href="#preguntas">Preguntas</a>
+    </nav>
+
+    <!-- Acciones -->
+    <div class="navbar__actions">
+      <a class="navbar__login" routerLink="/auth/login">
+        Entrar
+      </a>
+
+      <a
+        class="btn btn-primary navbar__register"
+        routerLink="/auth/register"
+      >
+        Crear cuenta
+      </a>
+    </div>
+
+    <!-- Menú móvil -->
+    <button
+      class="navbar__menu"
+      type="button"
+      aria-label="Abrir menú"
+    >
+      ☰
+    </button>
+
+  </div>
+</header>

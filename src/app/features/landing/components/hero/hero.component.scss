@@ -1,0 +1,140 @@
+.hero {
+  position: relative;
+
+  padding: var(--space-13) 0;
+
+  //background:radial-gradient(circle at 80% 20%,rgba(112, 64, 232, 0.10),transparent 35%),var(--color-background-purple);
+  
+  background: radial-gradient(circle at 51% 184%, #512ab8 25%, #a78ee6 50%, rgba(241, 232, 250, 1) 77%);
+  overflow: hidden;
+}
+
+.hero__container {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
+
+.hero__content {
+  width: 100%;
+  max-width: 850px;
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  margin-bottom: var(--space-6);
+  padding: 8px 14px;
+
+  border: 1px solid var(--color-primary-200);
+  border-radius: var(--radius-full);
+
+  background: var(--color-background);
+
+  color: var(--color-primary-600);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+
+  box-shadow: var(--shadow-sm);
+}
+
+.hero__badge-icon {
+  color: var(--color-primary-500);
+}
+
+
+/* =========================================================
+   HERO TITLE
+   ========================================================= */
+.hero__title {
+  max-width: 850px;
+  margin: 0 auto;
+
+  color: var(--color-text-primary);
+
+  font-size: clamp(
+    42px,
+    6vw,
+    var(--font-size-6xl)
+  );
+
+  font-weight: var(--font-weight-bold);
+  line-height: 1.05;
+  letter-spacing: -2px;
+}
+
+.hero__title span {
+  color: var(--color-primary-500);
+}
+
+/* =========================================================
+   HERO DESCRIPTION
+   ========================================================= */
+   .hero__description {
+  max-width: 680px;
+
+  margin: var(--space-6) auto 0;
+
+  color: var(--color-text-secondary);
+
+  font-size: var(--font-size-lg);
+  line-height: 1.7;
+}
+
+/* =========================================================
+   HERO ACTIONS
+   ========================================================= */
+
+   .hero__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: var(--space-4);
+
+  margin-top: var(--space-8);
+}
+
+
+/* =========================================================
+   HERO responsive
+   ========================================================= */
+
+   @media (max-width: 768px) {
+
+  .hero {
+    padding: var(--space-10) 0;
+  }
+
+  .hero__title {
+    font-size: 42px;
+    letter-spacing: -1px;
+  }
+
+  .hero__description {
+    font-size: var(--font-size-md);
+  }
+
+  .hero__actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero__actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+
+  .hero__title {
+    font-size: 36px;
+  }
+
+  .hero__badge {
+    font-size: var(--font-size-xs);
+  }
+}

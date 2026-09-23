@@ -1,0 +1,58 @@
+<article class="promotion-card">
+
+  <div class="promotion-card__header">
+
+    <div class="promotion-card__icon">
+      {{ promotion.icon }}
+    </div>
+
+    <div class="promotion-card__info">
+      <h3>{{ promotion.title }}</h3>
+      <p>{{ promotion.description }}</p>
+    </div>
+
+    <span
+      class="promotion-card__status"
+      [class.promotion-card__status--inactive]="promotion.status === 'inactive'"
+    >
+      {{ promotion.status === 'active' ? 'Activa' : 'Inactiva' }}
+    </span>
+
+  </div>
+
+  <div class="promotion-card__metrics">
+
+    <div class="promotion-card__metric">
+      <span>Vistas</span>
+      <strong>{{ promotion.views | number }}</strong>
+    </div>
+
+    <div class="promotion-card__metric">
+      <span>Canjes</span>
+      <strong>{{ promotion.redemptions }}</strong>
+    </div>
+
+    <div class="promotion-card__metric">
+      <span>Conversión</span>
+      <strong>{{ promotion.conversion }}%</strong>
+    </div>
+
+  </div>
+
+  <div class="promotion-card__progress">
+
+    <div class="promotion-card__progress-header">
+      <span>Conversión</span>
+      <span>{{ promotion.conversion }}%</span>
+    </div>
+
+    <div class="promotion-card__progress-track">
+      <div
+        class="promotion-card__progress-bar"
+        [style.width.%]="promotion.conversion"
+      ></div>
+    </div>
+
+  </div>
+
+</article>

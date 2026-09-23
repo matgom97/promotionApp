@@ -1,0 +1,83 @@
+<section
+  id="promociones"
+  class="promotion-dashboard section"
+>
+
+  <div class="container">
+
+    <div class="promotion-dashboard__header">
+
+      <div>
+        <span class="promotion-dashboard__eyebrow">
+          PANEL DE PROMOCIONES
+        </span>
+
+        <h2>
+          Gestiona tus promociones
+          <span>desde un solo lugar</span>
+        </h2>
+
+        <p>
+          Crea promociones, controla sus canjes y descubre
+          qué ofertas generan mejores resultados.
+        </p>
+      </div>
+
+      <div class="promotion-dashboard__badge">
+        <span></span>
+        3 promociones activas
+      </div>
+
+    </div>
+
+    <div class="promotion-dashboard__panel">
+
+      <div class="promotion-dashboard__panel-header">
+
+        <div>
+          <h3>Promociones activas</h3>
+          <span>Últimos 30 días</span>
+        </div>
+
+        <button type="button">
+          Ver todas →
+        </button>
+
+      </div>
+
+      <div class="promotion-dashboard__cards">
+
+        @for (promotion of promotions; track promotion.title) {
+
+          <app-promotion-card
+            [promotion]="promotion"
+          />
+
+        }
+
+      </div>
+
+      <div class="promotion-dashboard__summary">
+
+        <div>
+          <span>Conversión media</span>
+          <strong>6,8%</strong>
+        </div>
+
+        <div>
+          <span>Total de canjes</span>
+          <strong>{{ totalRedemptions }}</strong>
+        </div>
+
+        <div class="promotion-dashboard__summary-highlight">
+          <span>Rendimiento</span>
+          <strong>↑ 18,4%</strong>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
