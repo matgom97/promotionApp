@@ -1,15 +1,10 @@
 <header class="navbar">
   <div class="navbar__container">
-
     <!-- Logo -->
-    <a class="navbar__brand" routerLink="/">
-      <div class="navbar__logo">
-        ♨
-      </div>
+    <a class="navbar__brand" routerLink="/" (click)="closeMenu()">
+      <div class="navbar__logo">♨</div>
 
-      <span class="navbar__name">
-        Promo<span>Table</span>
-      </span>
+      <span class="navbar__name"> Promo<span>Table</span> </span>
     </a>
 
     <!-- Navegación -->
@@ -22,26 +17,61 @@
 
     <!-- Acciones -->
     <div class="navbar__actions">
-      <a class="navbar__login" routerLink="/auth/login">
-        Entrar
-      </a>
+      <a class="navbar__login" routerLink="/auth/login"> Entrar </a>
 
-      <a
-        class="btn btn-primary navbar__register"
-        routerLink="/auth/register"
-      >
+      <a class="btn btn-primary navbar__register" routerLink="/auth/register">
         Crear cuenta
       </a>
     </div>
 
-    <!-- Menú móvil -->
+    <!-- MOBILE MENU BUTTON -->
+
     <button
       class="navbar__menu"
       type="button"
+      [attr.aria-expanded]="isMenuOpen"
       aria-label="Abrir menú"
+      (click)="toggleMenu()"
     >
-      ☰
-    </button>
+      <span></span>
 
+      <span></span>
+
+      <span></span>
+    </button>
   </div>
+
+  <!-- MOBILE MENU -->
+
+  @if (isMenuOpen) {
+    <div class="navbar__mobile-menu">
+      <nav class="navbar__mobile-links">
+        <a href="#funciones" (click)="closeMenu()"> Funciones </a>
+
+        <a href="#como-funciona" (click)="closeMenu()"> Cómo funciona </a>
+
+        <a href="#precios" (click)="closeMenu()"> Precios </a>
+
+        <a href="#preguntas" (click)="closeMenu()"> Preguntas </a>
+      </nav>
+
+      <div class="navbar__mobile-actions">
+        <a
+          class="navbar__mobile-login"
+          routerLink="/auth/login"
+          (click)="closeMenu()"
+        >
+          Entrar
+        </a>
+
+        <a
+          class="btn btn-primary navbar__mobile-register"
+          routerLink="/auth/register"
+          (click)="closeMenu()"
+        >
+          Crear cuenta
+        </a>
+      </div>
+    </div>
+  }
 </header>

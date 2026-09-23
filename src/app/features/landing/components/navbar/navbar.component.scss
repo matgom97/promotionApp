@@ -172,3 +172,163 @@
     justify-content: center;
   }
 }
+
+
+/* =========================================
+   MOBILE MENU BUTTON
+========================================= */
+
+.navbar__menu {
+  display: none;
+
+  width: 42px;
+  height: 42px;
+
+  border: none;
+  background: transparent;
+
+  cursor: pointer;
+
+  padding: 8px;
+
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  gap: 5px;
+}
+
+.navbar__menu span {
+  display: block;
+
+  width: 22px;
+  height: 2px;
+
+  background: #2d2142;
+
+  border-radius: 2px;
+
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
+}
+
+
+/* =========================================
+   MOBILE MENU
+========================================= */
+
+.navbar__mobile-menu {
+  display: none;
+}
+
+
+/* =========================================
+   TABLET / MOBILE
+========================================= */
+
+@media (max-width: 768px) {
+
+  .navbar__links,
+  .navbar__actions {
+    display: none;
+  }
+
+  .navbar__menu {
+    display: flex;
+  }
+
+
+  .navbar__mobile-menu {
+    display: block;
+
+    position: absolute;
+
+    top: 100%;
+    left: 0;
+    right: 0;
+
+    background: #ffffff;
+
+    border-top: 1px solid #eee8f5;
+
+    box-shadow: 0 12px 30px rgba(45, 33, 66, 0.10);
+
+    padding: 20px 24px 24px;
+
+    z-index: 1000;
+  }
+
+
+  .navbar__mobile-links {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+  }
+
+
+  .navbar__mobile-links a {
+    display: block;
+
+    padding: 14px 12px;
+
+    color: #40384d;
+
+    text-decoration: none;
+
+    font-size: 15px;
+    font-weight: 500;
+
+    border-radius: 8px;
+
+    transition:
+      background 0.2s ease,
+      color 0.2s ease;
+  }
+
+
+  .navbar__mobile-links a:hover {
+    background: #f7f3fb;
+    color: #6c3fd1;
+  }
+
+
+  .navbar__mobile-actions {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    margin-top: 16px;
+
+    padding-top: 16px;
+
+    border-top: 1px solid #eee8f5;
+  }
+
+
+  .navbar__mobile-login {
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    min-height: 44px;
+
+    color: #40384d;
+
+    text-decoration: none;
+
+    font-weight: 600;
+  }
+
+
+  .navbar__mobile-register {
+    width: 100%;
+
+    justify-content: center;
+  }
+}
