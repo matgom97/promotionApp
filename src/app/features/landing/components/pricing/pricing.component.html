@@ -1,17 +1,9 @@
-<section
-  id="precios"
-  class="pricing section"
->
-
+<section id="precios" class="pricing section">
   <div class="container">
-
     <!-- Header -->
 
     <div class="pricing__header">
-
-      <span class="pricing__eyebrow">
-        PRECIOS
-      </span>
+      <span class="pricing__eyebrow"> PRECIOS </span>
 
       <h2>
         Empieza gratis y
@@ -19,35 +11,23 @@
       </h2>
 
       <p>
-        Elige el plan que mejor se adapte a las necesidades
-        de tu restaurante.
+        Elige el plan que mejor se adapte a las necesidades de tu restaurante.
       </p>
-
     </div>
-
 
     <!-- Plans -->
 
     <div class="pricing__grid">
-
       @for (plan of plans; track plan.name) {
-
         <article
           class="pricing-card"
           [class.pricing-card--featured]="plan.featured"
         >
-
           @if (plan.featured) {
-
-            <div class="pricing-card__badge">
-              Recomendado
-            </div>
-
+            <div class="pricing-card__badge">Recomendado</div>
           }
 
-
           <div class="pricing-card__header">
-
             <h3>
               {{ plan.name }}
             </h3>
@@ -55,62 +35,41 @@
             <p>
               {{ plan.description }}
             </p>
-
           </div>
 
-
           <div class="pricing-card__price">
-
-            <span class="pricing-card__currency">
-              $
-            </span>
+            <span class="pricing-card__currency"> $ </span>
 
             <strong>
               {{ plan.price }}
             </strong>
 
-            <span class="pricing-card__period">
-              / {{ plan.period }}
-            </span>
-
+            <span class="pricing-card__period"> / {{ plan.period }} </span>
           </div>
 
-
           <ul class="pricing-card__features">
-
             @for (feature of plan.features; track feature) {
-
               <li>
-                <span class="pricing-card__check">
-                  ✓
-                </span>
+                <span class="pricing-card__check"> ✓ </span>
 
                 <span>
                   {{ feature }}
                 </span>
               </li>
-
             }
-
           </ul>
 
-
           <a
-            routerLink="/auth/register"
             class="pricing-card__button"
-            [class.pricing-card__button--featured]="plan.featured"
+            [routerLink]="['/auth/register']"
+            [queryParams]="{ plan: plan.id }"
           >
             {{ plan.buttonText }}
 
             <span>→</span>
           </a>
-
         </article>
-
       }
-
     </div>
-
   </div>
-
 </section>
