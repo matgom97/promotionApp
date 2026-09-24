@@ -1,7 +1,10 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+type PlanType = 'starter' | 'pro' | 'business';
+
 interface PricingPlan {
+  id: PlanType;
   name: string;
   description: string;
   price: string;
@@ -22,6 +25,7 @@ export class PricingComponent {
 
   plans: PricingPlan[] = [
     {
+      id: 'starter',
       name: 'Starter',
       description: 'Para restaurantes que están comenzando.',
       price: '0',
@@ -36,6 +40,7 @@ export class PricingComponent {
       featured: false
     },
     {
+      id: 'pro',
       name: 'Pro',
       description: 'Para restaurantes que quieren crecer.',
       price: '39',
@@ -51,6 +56,7 @@ export class PricingComponent {
       featured: true
     },
     {
+      id: 'business',
       name: 'Business',
       description: 'Para equipos y operaciones más grandes.',
       price: '89',
@@ -62,9 +68,8 @@ export class PricingComponent {
         'Gestión de equipos',
         'Soporte prioritario'
       ],
-      buttonText: 'Empezar business',
+      buttonText: 'Contactar',
       featured: false
     }
   ];
-
 }
