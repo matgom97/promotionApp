@@ -73,17 +73,17 @@
 
     flex-shrink: 0;
 
-    border-radius: var(--radius-full);
+  //  border-radius: var(--radius-full);
 
     color: var(--color-text-white);
 
-    background: linear-gradient(
+  /*  background: linear-gradient(
         135deg,
         var(--color-primary-600),
         var(--color-primary-400)
-    );
+    );*/
 
-    box-shadow: var(--shadow-primary);
+   //box-shadow: var(--shadow-primary);
 }
 
 .login-logo > span > span {

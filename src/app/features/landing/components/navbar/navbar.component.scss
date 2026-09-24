@@ -11,6 +11,8 @@
   backdrop-filter: blur(12px);
 }
 
+
+
 .navbar__container {
   width: 100%;
   max-width: var(--container-max-width);
@@ -30,47 +32,39 @@
 
 
 .navbar__brand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
+    display: inline-flex;
+    align-items: center;
 
-  flex-shrink: 0;
+    gap: var(--space-3);
 
-  text-decoration: none;
+    color: var(--color-text-primary);
+
+    text-decoration: none;
 }
 
-.navbar__logo {
-  width: 40px;
-  height: 40px;
+.navbar__brand img {
+    width: var(--space-9);
+    height: var(--space-9);
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    display: block;
 
-  border-radius: var(--radius-md);
+    flex-shrink: 0;
 
-  color: var(--color-text-white);
-
-  background: linear-gradient(
-    135deg,
-    var(--color-primary-600),
-    var(--color-primary-400)
-  );
-
-  font-size: 20px;
+    object-fit: contain;
 }
 
 .navbar__name {
-  color: var(--color-text-primary);
+    color: var(--color-text-primary);
 
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+
+    line-height: 1;
 }
 
 .navbar__name span {
-  color: var(--color-primary-500);
+    color: var(--color-primary-500);
 }
-
 
 
 .navbar__links {
