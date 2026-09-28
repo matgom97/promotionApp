@@ -22,28 +22,28 @@ export class HowItWorksComponent {
       title: 'Crea tu promoción',
       description:
         'Define el descuento, beneficio, vigencia y condiciones de tu promoción.',
-      icon: '✦'
+      icon: 'assets/icons/promo.svg',
     },
     {
       number: '02',
       title: 'Publica y comparte el QR',
       description:
         'Genera tu código QR y colócalo en tus mesas, redes sociales o canales digitales.',
-      icon: '▦'
+      icon: 'assets/icons/qr.svg',
     },
     {
       number: '03',
       title: 'El cliente obtiene su código',
       description:
         'El cliente descubre la promoción, se registra y obtiene un código único.',
-      icon: '✓'
+      icon: 'assets/icons/check.svg',
     },
     {
       number: '04',
       title: 'Valida y mide',
       description:
         'Valida el código en el restaurante y consulta los resultados de la promoción.',
-      icon: '↗'
+      icon: 'assets/icons/chart.svg',
     }
   ];
 

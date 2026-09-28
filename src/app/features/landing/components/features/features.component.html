@@ -32,7 +32,13 @@
         <article class="feature-card">
 
           <div class="feature-card__icon">
-            {{ feature.icon }}
+            <img
+
+    [src]="feature.icon"
+
+    [alt]="feature.title"
+
+  />
           </div>
 
           <div class="feature-card__content">
