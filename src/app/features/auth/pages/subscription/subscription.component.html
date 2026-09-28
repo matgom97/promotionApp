@@ -1,0 +1,429 @@
+<main class="subscription-page">
+  <section class="subscription-page__content">
+
+    <!-- HEADER -->
+
+    <div class="subscription-page__header">
+
+      <a
+        routerLink="/"
+        class="subscription-page__brand"
+      >
+        <img
+          src="assets/icons/logo.png"
+          alt="PromoTable"
+        />
+
+        <span>
+          Promo<span>Table</span>
+        </span>
+      </a>
+
+      <div class="subscription-page__step">
+
+        <span class="subscription-page__step-number">
+          2
+        </span>
+
+        <span>
+          Completa tu suscripción
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <!-- CONTENT -->
+
+    <div class="subscription-layout">
+
+      <!-- ================================= -->
+      <!-- FORMULARIO DE PAGO -->
+      <!-- ================================= -->
+
+      <section class="payment-form">
+
+        <div class="payment-form__header">
+
+          <span class="payment-form__eyebrow">
+            DATOS DE PAGO
+          </span>
+
+          <h1>
+            Activa tu plan {{ plan.name }}
+          </h1>
+
+          <p>
+            Ingresa los datos de tu tarjeta para completar
+            tu suscripción de forma segura.
+          </p>
+
+        </div>
+
+
+        <form
+          [formGroup]="subscriptionForm"
+          (ngSubmit)="submit()"
+          class="payment-form__form"
+        >
+
+          <!-- NÚMERO DE TARJETA -->
+
+          <div class="form-field">
+
+            <label for="cardNumber">
+              Número de tarjeta
+            </label>
+
+            <div class="input-wrapper">
+
+              <span class="input-wrapper__icon">
+                💳
+              </span>
+
+              <input
+                id="cardNumber"
+                type="text"
+                inputmode="numeric"
+                autocomplete="cc-number"
+                maxlength="19"
+                formControlName="cardNumber"
+                placeholder="1234 5678 9012 3456"
+              />
+
+            </div>
+
+            @if (
+              subscriptionForm.get('cardNumber')?.touched &&
+              subscriptionForm.get('cardNumber')?.invalid
+            ) {
+
+              <small class="form-error">
+                Ingresa un número de tarjeta válido.
+              </small>
+
+            }
+
+          </div>
+
+
+          <!-- TITULAR -->
+
+          <div class="form-field">
+
+            <label for="cardholderName">
+              Nombre del titular
+            </label>
+
+            <input
+              id="cardholderName"
+              type="text"
+              autocomplete="cc-name"
+              formControlName="cardholderName"
+              placeholder="Nombre como aparece en la tarjeta"
+            />
+
+          </div>
+
+
+          <!-- VENCIMIENTO + CVV -->
+
+          <div class="form-row">
+
+            <!-- VENCIMIENTO -->
+
+            <div class="form-field">
+
+              <label>
+                Vencimiento
+              </label>
+
+              <div class="expiry-fields">
+
+                <!-- MES -->
+
+                <select
+                  formControlName="expiryMonth"
+                  (change)="updateExpiryDate()"
+                >
+
+                  <option
+                    value=""
+                    disabled
+                  >
+                    Mes
+                  </option>
+
+                  @for (
+                    month of getAvailableMonths();
+                    track month.value
+                  ) {
+
+                    <option [value]="month.value">
+                      {{ month.label }}
+                    </option>
+
+                  }
+
+                </select>
+
+
+                <!-- AÑO -->
+
+                <select
+                  formControlName="expiryYear"
+                  (change)="onExpiryYearChange()"
+                >
+
+                  <option
+                    value=""
+                    disabled
+                  >
+                    Año
+                  </option>
+
+                  @for (
+                    year of expiryYears;
+                    track year.value
+                  ) {
+
+                    <option [value]="year.value">
+                      {{ year.label }}
+                    </option>
+
+                  }
+
+                </select>
+
+              </div>
+
+            </div>
+
+
+            <!-- CVV -->
+
+            <div class="form-field">
+
+              <label for="cvv">
+                CVV
+              </label>
+
+              <input
+                id="cvv"
+                type="password"
+                inputmode="numeric"
+                autocomplete="cc-csc"
+                maxlength="4"
+                formControlName="cvv"
+                placeholder="•••"
+              />
+
+            </div>
+
+          </div>
+
+
+          <!-- SEGURIDAD -->
+
+          <div class="payment-security">
+
+            <span class="payment-security__icon">
+              🔒
+            </span>
+
+            <div>
+
+              <strong>
+                Pago seguro
+              </strong>
+
+              <p>
+                Tus datos de pago son protegidos y
+                procesados de forma segura.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <!-- BOTÓN -->
+
+          <button
+            type="submit"
+            class="btn btn-primary payment-form__submit"
+            [disabled]="isSubmitting"
+          >
+
+            @if (isSubmitting) {
+
+              Procesando...
+
+            } @else {
+
+              Activar plan {{ plan.name }}
+
+            }
+
+          </button>
+
+
+          <!-- TÉRMINOS -->
+
+          <p class="payment-form__terms">
+            Al continuar aceptas los términos y condiciones
+            del servicio.
+          </p>
+
+        </form>
+
+      </section>
+
+
+      <!-- ================================= -->
+      <!-- RESUMEN -->
+      <!-- ================================= -->
+
+      <aside class="subscription-summary">
+
+
+        <!-- TARJETA -->
+
+        <div class="card-preview">
+
+          <div class="card-preview__top">
+
+            <span class="card-preview__brand">
+              PromoTable
+            </span>
+
+            <span class="card-preview__chip">
+              ▰
+            </span>
+
+          </div>
+
+
+          <!-- NÚMERO -->
+
+          <div class="card-preview__number">
+
+            {{ maskedCardNumber }}
+
+          </div>
+
+
+          <!-- INFORMACIÓN -->
+
+          <div class="card-preview__bottom">
+
+
+            <!-- TITULAR -->
+
+            <div>
+
+              <span class="card-preview__label">
+                TITULAR
+              </span>
+
+              <span class="card-preview__value">
+
+                {{ cardholderName || 'NOMBRE DEL TITULAR' }}
+
+              </span>
+
+            </div>
+
+
+            <!-- VENCIMIENTO -->
+
+            <div>
+
+              <span class="card-preview__label">
+                VENCE
+              </span>
+
+              <span class="card-preview__value">
+
+                {{ expiryDate || 'MM/YY' }}
+
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- ================================= -->
+        <!-- RESUMEN DEL PLAN -->
+        <!-- ================================= -->
+
+        <div class="plan-summary">
+
+          <div class="plan-summary__header">
+
+            <div>
+
+              <span class="plan-summary__label">
+                PLAN SELECCIONADO
+              </span>
+
+              <h2>
+                {{ plan.name }}
+              </h2>
+
+            </div>
+
+
+            <span class="plan-summary__price">
+
+              ${{ plan.price }}
+
+              <small>
+                / mes
+              </small>
+
+            </span>
+
+          </div>
+
+
+          <p class="plan-summary__description">
+
+            {{ plan.description }}
+
+          </p>
+
+
+          <ul class="plan-summary__features">
+
+            @for (
+              feature of plan.features;
+              track feature
+            ) {
+
+              <li>
+
+                <span>
+                  ✓
+                </span>
+
+                {{ feature }}
+
+              </li>
+
+            }
+
+          </ul>
+
+        </div>
+
+      </aside>
+
+    </div>
+
+  </section>
+</main>

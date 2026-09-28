@@ -67,6 +67,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/auth/pages/forgot-password/forgot-password.component')
             .then(m => m.ForgotPasswordComponent)
+      },
+
+      {
+        path: 'subscription',
+        loadComponent: () =>
+          import('./features/auth/pages/subscription/subscription.component')
+            .then(m => m.SubscriptionComponent)
       }
     ]
   },

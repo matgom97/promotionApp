@@ -1,11 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators
-} from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 type PlanType = 'starter' | 'pro' | 'business';
 
@@ -34,8 +29,9 @@ export class RegisterComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private route: ActivatedRoute
-  ) {}
+    private route: ActivatedRoute,
+    private router: Router
+  ) { }
 
   ngOnInit(): void {
 
@@ -89,7 +85,7 @@ export class RegisterComponent implements OnInit {
       ) {
         this.selectedPlan = plan;
       } else {
-        this.selectedPlan = 'pro';
+        this.selectedPlan = 'starter';
       }
 
       this.updatePlanInformation();
@@ -112,7 +108,7 @@ export class RegisterComponent implements OnInit {
         this.planName = 'Pro';
 
         this.planDescription =
-          '14 días de plan Pro sin tarjeta. Después puedes seguir en el plan gratuito.';
+          '14 días de prueba del plan Pro. Agrega tu tarjeta para comenzar.';
 
         break;
 
@@ -120,10 +116,14 @@ export class RegisterComponent implements OnInit {
         this.planName = 'Business';
 
         this.planDescription =
-          'Gestiona múltiples restaurantes y equipos desde una misma plataforma.';
+          'Activa el plan Business agregando una tarjeta para comenzar.';
 
         break;
     }
+  }
+
+  requiresPayment(): boolean {
+    return this.selectedPlan !== 'starter';
   }
 
   submit(): void {
@@ -133,15 +133,96 @@ export class RegisterComponent implements OnInit {
       this.registerForm.markAllAsTouched();
 
       return;
+
     }
 
-    const payload = {
+    const registrationData = {
+
       ...this.registerForm.value,
+
       plan: this.selectedPlan
+
     };
 
-    console.log('Registro:', payload);
+    console.log('Registro:', registrationData);
 
-    // Aquí posteriormente llamaremos al backend.
+    /*
+
+     * PRO / BUSINESS
+
+     *
+
+     * Guardamos temporalmente la información necesaria
+
+     * para demostrar que el usuario pasó por el registro.
+
+     *
+
+     * IMPORTANTE:
+
+     * No guardamos password, tarjeta ni CVV.
+
+     */
+
+    if (this.requiresPayment()) {
+
+      const pendingRegistration = {
+
+        plan: this.selectedPlan,
+
+        name: registrationData.name,
+
+        restaurantName: registrationData.restaurantName,
+
+        email: registrationData.email
+
+      };
+
+      sessionStorage.setItem(
+
+        'pending_registration',
+
+        JSON.stringify(pendingRegistration)
+
+      );
+
+      this.router.navigate(
+
+        ['/auth/subscription'],
+
+        {
+
+          queryParams: {
+
+            plan: this.selectedPlan
+
+          }
+
+        }
+
+      );
+
+      return;
+
+    }
+
+    /*
+
+     * STARTER
+
+     *
+
+     * Por ahora simulamos continuar al dashboard.
+
+     * Posteriormente aquí se hará el registro real
+
+     * contra Laravel.
+
+     */
+
+    this.router.navigate(['/app/dashboard']);
+
   }
+
+
 }
