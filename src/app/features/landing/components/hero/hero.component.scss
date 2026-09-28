@@ -1,24 +1,76 @@
 .hero {
   position: relative;
-
-  padding: var(--space-13) 0;
-
-  //background:radial-gradient(circle at 80% 20%,rgba(112, 64, 232, 0.10),transparent 35%),var(--color-background-purple);
-  
-  background: radial-gradient(circle at 51% 184%, #512ab8 25%, #a78ee6 50%, rgba(241, 232, 250, 1) 77%);
+  min-height: calc(100vh - var(--header-height));
+  display: flex;
+  align-items: center;
   overflow: hidden;
+  isolation: isolate;
+
+  color: var(--color-text-white);
+  background: var(--color-primary-900);
 }
 
+/* ==========================================
+   VIDEO
+   ========================================== */
+
+.hero__video {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center;
+
+  z-index: -3;
+}
+
+/* ==========================================
+   OVERLAY
+   ========================================== */
+
+.hero__overlay {
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(23, 23, 47, 0.92) 0%,
+      rgba(23, 23, 47, 0.78) 45%,
+      rgba(23, 23, 47, 0.45) 100%
+    );
+
+  z-index: -2;
+}
+
+/* ==========================================
+   CONTENIDO
+   ========================================== */
+
 .hero__container {
+  position: relative;
+  z-index: 1;
+
   display: flex;
-  justify-content: center;
-  text-align: center;
+  align-items: center;
+
+  min-height: calc(100vh - var(--header-height));
+
+  padding-top: var(--space-10);
+  padding-bottom: var(--space-10);
 }
 
 .hero__content {
   width: 100%;
-  max-width: 850px;
+  max-width: 720px;
 }
+
+/* ==========================================
+   BADGE
+   ========================================== */
 
 .hero__badge {
   display: inline-flex;
@@ -26,115 +78,186 @@
   gap: var(--space-2);
 
   margin-bottom: var(--space-6);
-  padding: 8px 14px;
 
-  border: 1px solid var(--color-primary-200);
+  padding: var(--space-2) var(--space-4);
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-full);
 
-  background: var(--color-background);
+  background: rgba(255, 255, 255, 0.08);
 
-  color: var(--color-primary-600);
+  backdrop-filter: blur(8px);
+
+  color: var(--color-text-white);
 
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-
-  box-shadow: var(--shadow-sm);
 }
 
 .hero__badge-icon {
-  color: var(--color-primary-500);
+  color: var(--color-primary-300);
 }
 
+/* ==========================================
+   TITLE
+   ========================================== */
 
-/* =========================================================
-   HERO TITLE
-   ========================================================= */
 .hero__title {
-  max-width: 850px;
-  margin: 0 auto;
+  margin: 0;
 
-  color: var(--color-text-primary);
+  max-width: 720px;
 
   font-size: clamp(
-    42px,
-    6vw,
+    var(--font-size-4xl),
+    5vw,
     var(--font-size-6xl)
   );
 
-  font-weight: var(--font-weight-bold);
+  color:var(--color-primary-50);
+
   line-height: 1.05;
-  letter-spacing: -2px;
+
+  font-weight: var(--font-weight-bold);
+
+  letter-spacing: -0.03em;
 }
 
 .hero__title span {
-  color: var(--color-primary-500);
+  display: block;
+
+  color: var(--color-primary-300);
 }
 
-/* =========================================================
-   HERO DESCRIPTION
-   ========================================================= */
-   .hero__description {
-  max-width: 680px;
+/* ==========================================
+   DESCRIPTION
+   ========================================== */
 
-  margin: var(--space-6) auto 0;
+.hero__description {
+  max-width: 640px;
 
-  color: var(--color-text-secondary);
+  margin: var(--space-6) 0 0;
+
+  color: rgba(255, 255, 255, 0.82);
 
   font-size: var(--font-size-lg);
+
   line-height: 1.7;
 }
 
-/* =========================================================
-   HERO ACTIONS
-   ========================================================= */
+/* ==========================================
+   ACTIONS
+   ========================================== */
 
-   .hero__actions {
+.hero__actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-
+  flex-wrap: wrap;
   gap: var(--space-4);
 
-  margin-top: var(--space-8);
+  margin-top: var(--space-7);
 }
 
+.hero__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
 
-/* =========================================================
-   HERO responsive
-   ========================================================= */
+/* ==========================================
+   BOTÓN SECUNDARIO SOBRE VIDEO
+   ========================================== */
 
-   @media (max-width: 768px) {
+.hero__actions .btn-secondary {
+  border-color: rgba(255, 255, 255, 0.3);
+
+  background: rgba(255, 255, 255, 0.08);
+
+  color: var(--color-text-white);
+
+  backdrop-filter: blur(8px);
+}
+
+.hero__actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ==========================================
+   TABLET
+   ========================================== */
+
+@media (max-width: 768px) {
 
   .hero {
-    padding: var(--space-10) 0;
+    min-height: calc(100vh - var(--header-height));
   }
 
-  .hero__title {
-    font-size: 42px;
-    letter-spacing: -1px;
+  .hero__container {
+    min-height: calc(100vh - var(--header-height));
+
+    padding-top: var(--space-9);
+    padding-bottom: var(--space-9);
+  }
+
+  .hero__content {
+    max-width: 640px;
   }
 
   .hero__description {
     font-size: var(--font-size-md);
   }
 
-  .hero__actions {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .hero__actions .btn {
-    width: 100%;
+  .hero__overlay {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(23, 23, 47, 0.9),
+        rgba(23, 23, 47, 0.72)
+      );
   }
 }
 
+/* ==========================================
+   MOBILE
+   ========================================== */
+
 @media (max-width: 576px) {
 
-  .hero__title {
-    font-size: 36px;
+  .hero__container {
+    align-items: flex-end;
+
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-8);
   }
 
   .hero__badge {
     font-size: var(--font-size-xs);
+  }
+
+  .hero__title {
+    font-size: var(--font-size-4xl);
+  }
+
+  .hero__description {
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+  }
+
+  .hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero__actions .btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .hero__overlay {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(23, 23, 47, 0.68),
+        rgba(23, 23, 47, 0.94)
+      );
   }
 }
