@@ -1,11 +1,29 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
+
 import {
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+
+import {
+  Router,
+  RouterLink
+} from '@angular/router';
+
+import {
+  AuthService,
+  LoginRequest
+} from '../../../../core/services/auth/auth.service';
+
+import {
+  AuthStateService
+} from '../../../../core/services/auth/auth-state.service';
 
 @Component({
   selector: 'app-login',
@@ -23,9 +41,10 @@ export class LoginComponent implements OnInit {
 
   isSubmitting = false;
 
-  constructor(
-    private fb: FormBuilder
-  ) {}
+  private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+  private readonly authState = inject(AuthStateService);
 
   ngOnInit(): void {
 
@@ -55,23 +74,65 @@ export class LoginComponent implements OnInit {
 
   submit(): void {
 
-    if (this.loginForm.invalid) {
-
-      this.loginForm.markAllAsTouched();
-
+    if (this.isSubmitting) {
       return;
     }
 
-    const payload = {
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSubmitting = true;
+
+    const payload: LoginRequest = {
       email: this.loginForm.value.email,
-      password: this.loginForm.value.password,
-      remember: this.loginForm.value.remember
+      password: this.loginForm.value.password
     };
 
-    console.log('Login:', payload);
+    this.authService.login(payload).subscribe({
 
-    // Posteriormente:
-    // this.authService.login(payload)
+      next: () => {
 
+        /*
+         * El backend ya creó las cookies HttpOnly.
+         *
+         * Ahora recuperamos el usuario mediante /auth/me
+         * y lo almacenamos únicamente en memoria.
+         */
+        this.authState.reset();
+
+        this.authState.initialize().subscribe({
+
+          next: (authenticated) => {
+
+            if (!authenticated) {
+              this.isSubmitting = false;
+              return;
+            }
+
+            this.router.navigate([
+              '/app/dashboard'
+            ]);
+          },
+
+          error: () => {
+            this.isSubmitting = false;
+          }
+
+        });
+      },
+
+      error: (error) => {
+
+        console.error(
+          'Error iniciando sesión:',
+          error
+        );
+
+        this.isSubmitting = false;
+      }
+
+    });
   }
 }

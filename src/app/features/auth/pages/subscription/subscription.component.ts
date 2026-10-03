@@ -1,161 +1,152 @@
-import { Component, OnInit } from '@angular/core';
 import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators
-} from '@angular/forms';
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+
+import { FormsModule } from '@angular/forms';
+
 import {
   ActivatedRoute,
-  NavigationStart,
   Router,
-  RouterLink
+  RouterLink,
 } from '@angular/router';
 
-type PlanType = 'pro' | 'business';
+import {
+  EMPTY,
+  Subject,
+  interval,
+} from 'rxjs';
 
-interface SubscriptionPlan {
-  id: PlanType;
-  name: string;
-  price: number;
-  description: string;
-  features: string[];
-}
+import {
+  catchError,
+  switchMap,
+  take,
+  takeUntil,
+  takeWhile,
+} from 'rxjs/operators';
 
-interface ExpiryOption {
-  value: string;
-  label: string;
-}
+import { RegistrationStateService } from '../../../../core/services/auth/registration-state.service';
+
+import { SubscriptionsService } from '../../../../core/services/subscriptions/subscriptions.service';
+
+import { PaymentsService } from '../../../../core/services/payments/payments.service';
+
+import { WompiService } from '../../../../core/services/payments/wompi.service';
+
+import { WompiTokenizationService } from '../../../../core/services/wompi/wompi-tokenization.service';
+
+import { Subscription } from '../../../../core/models/subscription.model';
 
 @Component({
   selector: 'app-subscription',
   standalone: true,
   imports: [
-    ReactiveFormsModule,
-    RouterLink
+    FormsModule,
+    RouterLink,
   ],
   templateUrl: './subscription.component.html',
-  styleUrl: './subscription.component.scss'
+  styleUrl: './subscription.component.scss',
 })
-export class SubscriptionComponent implements OnInit {
+export class SubscriptionComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
-  subscriptionForm!: FormGroup;
+  @ViewChild('wompiForm', { static: false })
+  private wompiForm?: ElementRef<HTMLFormElement>;
 
-  selectedPlan: PlanType = 'pro';
+  private readonly destroy$ =
+    new Subject<void>();
 
-  plan!: SubscriptionPlan;
+  private pollingStarted =
+    false;
 
-  isSubmitting = false;
+  private redirectTimeoutId?: ReturnType<typeof setTimeout>;
 
-  // ==========================================
-  // DATOS PARA LA TARJETA VISUAL
-  // ==========================================
+  /**
+   * Indica que la página fue abierta
+   * después de que Wompi procesó el formulario.
+   *
+   * En este estado NO debemos volver a
+   * inicializar el widget.
+   */
+  isPaymentReturn =
+    false;
 
-  cardNumber = '';
+  subscription:
+    Subscription | null = null;
 
-  cardholderName = '';
+  subscriptionId:
+    string | null = null;
 
-  expiryDate = '';
+  sessionId:
+    string | null = null;
 
-  cvv = '';
+  acceptanceToken:
+    string | null = null;
 
-  // ==========================================
-  // VENCIMIENTO
-  // ==========================================
+  acceptancePermalink:
+    string | null = null;
 
-  selectedExpiryYear = '';
+  personalDataAuthToken:
+    string | null = null;
 
-  expiryMonths: ExpiryOption[] = [
-    {
-      value: '01',
-      label: '01'
-    },
-    {
-      value: '02',
-      label: '02'
-    },
-    {
-      value: '03',
-      label: '03'
-    },
-    {
-      value: '04',
-      label: '04'
-    },
-    {
-      value: '05',
-      label: '05'
-    },
-    {
-      value: '06',
-      label: '06'
-    },
-    {
-      value: '07',
-      label: '07'
-    },
-    {
-      value: '08',
-      label: '08'
-    },
-    {
-      value: '09',
-      label: '09'
-    },
-    {
-      value: '10',
-      label: '10'
-    },
-    {
-      value: '11',
-      label: '11'
-    },
-    {
-      value: '12',
-      label: '12'
-    }
-  ];
+  personalDataAuthPermalink:
+    string | null = null;
 
-  expiryYears: ExpiryOption[] = [];
+  wompiTermsAccepted =
+    false;
 
-  // ==========================================
-  // PLANES
-  // ==========================================
+  personalDataAccepted =
+    false;
 
-  plans: SubscriptionPlan[] = [
-    {
-      id: 'pro',
-      name: 'Pro',
-      price: 39,
-      description: 'Para restaurantes que quieren crecer.',
-      features: [
-        'Promociones ilimitadas',
-        'Códigos QR personalizados',
-        'Analíticas avanzadas',
-        'Segmentación de clientes',
-        'Usuarios y roles'
-      ]
-    },
-    {
-      id: 'business',
-      name: 'Business',
-      price: 89,
-      description: 'Para equipos y operaciones más grandes.',
-      features: [
-        'Todo lo incluido en Pro',
-        'Múltiples restaurantes',
-        'Reportes avanzados',
-        'Gestión de equipos',
-        'Soporte prioritario'
-      ]
-    }
-  ];
+  isLoading =
+    true;
+
+  isProcessing =
+    false;
+
+  isWaitingForPayment =
+    false;
+
+  paymentStatus:
+    | 'IDLE'
+    | 'PENDING'
+    | 'APPROVED'
+    | 'DECLINED'
+    | 'ERROR' =
+    'IDLE';
+
+  errorMessage =
+    '';
+
+  private widgetInitialized =
+    false;
 
   constructor(
-    private fb: FormBuilder,
-    private route: ActivatedRoute,
-    private router: Router
-  ) { }
+    private readonly registrationState:
+      RegistrationStateService,
+
+    private readonly subscriptionsService:
+      SubscriptionsService,
+
+    private readonly paymentsService:
+      PaymentsService,
+
+    private readonly wompiService:
+      WompiService,
+
+    private readonly wompiTokenizationService:
+      WompiTokenizationService,
+
+    private readonly router:
+      Router,
+
+    private readonly activatedRoute:
+      ActivatedRoute,
+  ) {}
 
   // ==========================================
   // INIT
@@ -163,515 +154,1084 @@ export class SubscriptionComponent implements OnInit {
 
   ngOnInit(): void {
 
-    this.createForm();
+    this.activatedRoute
+      .queryParamMap
+      .pipe(
+        take(1),
+      )
+      .subscribe((params) => {
 
-    this.generateExpiryYears();
+        const payment =
+          params.get('payment');
 
-    this.handlePlan();
+        const returnedSubscriptionId =
+          params.get('subscriptionId');
 
-    this.setupFormListeners();
+        /*
+         * ========================================
+         * REGRESO DESDE WOMPI
+         * ========================================
+         *
+         * El subscriptionId de la URL tiene
+         * prioridad absoluta.
+         *
+         * Esto permite recuperar el flujo aunque
+         * RegistrationStateService haya perdido
+         * su estado después del redirect.
+         */
 
-    this.setupNavigationProtection();
-  }
+        if (
+          payment === 'processing' &&
+          returnedSubscriptionId
+        ) {
 
-  private setupNavigationProtection(): void {
+          this.isPaymentReturn =
+            true;
 
-  this.router.events.subscribe(event => {
+          this.subscriptionId =
+            returnedSubscriptionId;
 
-    if (!(event instanceof NavigationStart)) {
-      return;
-    }
+          /*
+           * También actualizamos el estado
+           * temporal por compatibilidad con
+           * el resto del flujo.
+           */
+          this.registrationState
+            .setSubscriptionId(
+              returnedSubscriptionId,
+            );
 
-    const currentUrl = this.router.url;
+          this.paymentStatus =
+            'PENDING';
 
-    const isLeavingSubscription =
-      currentUrl.startsWith('/auth/subscription');
+          this.isProcessing =
+            true;
 
-    const isGoingToSubscription =
-      event.url.startsWith('/auth/subscription');
+          this.isWaitingForPayment =
+            true;
 
-    if (
-      isLeavingSubscription &&
-      !isGoingToSubscription
-    ) {
+          /*
+           * NO inicializamos Wompi.
+           *
+           * El pago ya fue enviado.
+           *
+           * Ahora solamente esperamos al webhook.
+           */
 
-      sessionStorage.removeItem(
-        'pending_registration'
-      );
-    }
-  });
-}
-
-  // ==========================================
-  // FORMULARIO
-  // ==========================================
-
-  private createForm(): void {
-
-    this.subscriptionForm = this.fb.group({
-
-      cardNumber: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(16)
-        ]
-      ],
-
-      cardholderName: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(3)
-        ]
-      ],
-
-      expiryMonth: [
-        '',
-        Validators.required
-      ],
-
-      expiryYear: [
-        '',
-        Validators.required
-      ],
-
-      cvv: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(4)
-        ]
-      ]
-
-    });
-  }
-
-  // ==========================================
-  // PLAN
-  // ==========================================
-
-  private handlePlan(): void {
-
-    this.route.queryParamMap.subscribe(params => {
-
-      const plan = params.get('plan');
-
-      // ==========================================
-      // 1. VALIDAR PLAN
-      // ==========================================
-
-      if (plan !== 'pro' && plan !== 'business') {
-
-        this.router.navigate(['/auth/register']);
-
-        return;
-      }
-
-      // ==========================================
-      // 2. VALIDAR REGISTRO PENDIENTE
-      // ==========================================
-
-      const pendingRegistration =
-        sessionStorage.getItem('pending_registration');
-
-      if (!pendingRegistration) {
-
-        this.router.navigate(
-          ['/auth/register'],
-          {
-            queryParams: {
-              plan: plan
-            }
-          }
-        );
-
-        return;
-      }
-
-      // ==========================================
-      // 3. VALIDAR INFORMACIÓN DEL REGISTRO
-      // ==========================================
-
-      try {
-
-        const registration =
-          JSON.parse(pendingRegistration);
-
-        // Verificamos que el registro
-        // corresponda al mismo plan.
-
-        if (registration.plan !== plan) {
-
-          sessionStorage.removeItem(
-            'pending_registration'
-          );
-
-          this.router.navigate(
-            ['/auth/register'],
-            {
-              queryParams: {
-                plan: plan
-              }
-            }
-          );
+          this.loadSubscription();
 
           return;
         }
 
-        // ==========================================
-        // 4. TODO CORRECTO
-        // ==========================================
+        /*
+         * ========================================
+         * FLUJO NORMAL
+         * ========================================
+         *
+         * En una primera entrada a la pantalla
+         * todavía podemos utilizar el estado de
+         * registro.
+         */
 
-        this.selectedPlan = plan;
+        const storedSubscriptionId =
+          this.registrationState
+            .getSubscriptionId();
 
-        this.loadPlan();
+        if (!storedSubscriptionId) {
 
-      } catch {
+          /*
+           * No tenemos una suscripción válida
+           * para esta pantalla.
+           */
+          this.isLoading =
+            false;
 
-        // Si el contenido está corrupto,
-        // eliminamos el registro pendiente.
+          this.router.navigate([
+            '/auth/register',
+          ]);
 
-        sessionStorage.removeItem(
-          'pending_registration'
-        );
-
-        this.router.navigate(
-          ['/auth/register'],
-          {
-            queryParams: {
-              plan: plan
-            }
-          }
-        );
-      }
-    });
-  }
-
-  private loadPlan(): void {
-
-    const selectedPlan = this.plans.find(
-      plan => plan.id === this.selectedPlan
-    );
-
-    if (!selectedPlan) {
-
-      this.router.navigate(['/auth/register']);
-
-      return;
-    }
-
-    this.plan = selectedPlan;
-  }
-
-  // ==========================================
-  // LISTENERS DEL FORMULARIO
-  // ==========================================
-
-  private setupFormListeners(): void {
-
-    // Número de tarjeta
-
-    this.subscriptionForm
-      .get('cardNumber')
-      ?.valueChanges
-      .subscribe(value => {
-
-        this.cardNumber = this.formatCardNumber(value);
-
-        if (this.cardNumber !== value) {
-
-          this.subscriptionForm
-            .get('cardNumber')
-            ?.setValue(
-              this.cardNumber,
-              {
-                emitEvent: false
-              }
-            );
+          return;
         }
-      });
 
+        this.subscriptionId =
+          storedSubscriptionId;
 
-    // Nombre del titular
-
-    this.subscriptionForm
-      .get('cardholderName')
-      ?.valueChanges
-      .subscribe(value => {
-
-        this.cardholderName = value || '';
+        this.initializePaymentPage();
 
       });
 
-
-    // Mes
-
-    this.subscriptionForm
-      .get('expiryMonth')
-      ?.valueChanges
-      .subscribe(() => {
-
-        this.updateExpiryDate();
-
-      });
-
-
-    // Año
-
-    this.subscriptionForm
-      .get('expiryYear')
-      ?.valueChanges
-      .subscribe(value => {
-
-        this.selectedExpiryYear = value || '';
-
-        this.validateSelectedMonth();
-
-        this.updateExpiryDate();
-
-      });
-
-
-    // CVV
-
-    this.subscriptionForm
-      .get('cvv')
-      ?.valueChanges
-      .subscribe(value => {
-
-        this.cvv = value || '';
-
-      });
   }
 
-  // ==========================================
-  // NÚMERO DE TARJETA
-  // ==========================================
-
-  private formatCardNumber(value: string): string {
-
-    const numbers = (value || '')
-      .replace(/\D/g, '')
-      .substring(0, 16);
-
-    return numbers
-      .replace(/(.{4})/g, '$1 ')
-      .trim();
+  ngAfterViewInit(): void {
+    /*
+     * La inicialización del widget se dispara
+     * desde initializeSession/loadAcceptanceTokens
+     * cuando los datos estén disponibles.
+     */
   }
 
-  get maskedCardNumber(): string {
+  ngOnDestroy(): void {
 
-    const numbers = this.cardNumber.replace(/\D/g, '');
+    this.destroy$.next();
 
-    if (!numbers) {
+    this.destroy$.complete();
 
-      return '•••• •••• •••• ••••';
-    }
-
-    const lastFour = numbers.slice(-4);
-
-    return `•••• •••• •••• ${lastFour}`;
-  }
-
-  // ==========================================
-  // AÑOS DE VENCIMIENTO
-  // ==========================================
-
-  private generateExpiryYears(): void {
-
-    const currentYear = new Date().getFullYear();
-
-    const numberOfYears = 10;
-
-    this.expiryYears = Array.from(
-      {
-        length: numberOfYears
-      },
-      (_, index) => {
-
-        const year = currentYear + index;
-
-        return {
-          value: String(year),
-          label: String(year)
-        };
-
-      }
-    );
-  }
-
-  // ==========================================
-  // MESES DISPONIBLES
-  // ==========================================
-
-  getAvailableMonths(): ExpiryOption[] {
-
-    const currentDate = new Date();
-
-    const currentYear = currentDate.getFullYear();
-
-    const currentMonth = currentDate.getMonth() + 1;
-
-    const selectedYear = Number(
-      this.selectedExpiryYear
-    );
-
-    // Si todavía no seleccionó año,
-    // mostramos todos los meses.
-
-    if (!selectedYear) {
-
-      return this.expiryMonths;
-    }
-
-    // Si seleccionó el año actual,
-    // solamente mostramos meses actuales
-    // o futuros.
-
-    if (selectedYear === currentYear) {
-
-      return this.expiryMonths.filter(
-        month =>
-          Number(month.value) >= currentMonth
+    if (this.redirectTimeoutId) {
+      clearTimeout(
+        this.redirectTimeoutId,
       );
     }
 
-    // Para años futuros todos los meses son válidos.
-
-    return this.expiryMonths;
   }
 
   // ==========================================
-  // VALIDAR MES SELECCIONADO
+  // NORMAL PAYMENT PAGE
   // ==========================================
 
-  private validateSelectedMonth(): void {
+  private initializePaymentPage(): void {
 
-    const availableMonths =
-      this.getAvailableMonths();
+    this.isLoading =
+      true;
 
-    const selectedMonth =
-      this.subscriptionForm
-        .get('expiryMonth')
-        ?.value;
+    this.initializeSession();
 
-    const isValidMonth =
-      availableMonths.some(
-        month =>
-          month.value === selectedMonth
-      );
+    this.loadSubscription();
 
-    if (!isValidMonth) {
+    this.loadAcceptanceTokens();
 
-      this.subscriptionForm
-        .get('expiryMonth')
-        ?.setValue('');
-    }
   }
 
   // ==========================================
-  // CAMBIO DE AÑO
+  // LOAD SUBSCRIPTION
   // ==========================================
 
-  onExpiryYearChange(): void {
+  private loadSubscription(): void {
 
-    this.selectedExpiryYear =
-      this.subscriptionForm
-        .get('expiryYear')
-        ?.value || '';
+    if (!this.subscriptionId) {
 
-    this.validateSelectedMonth();
-
-    this.updateExpiryDate();
-  }
-
-  // ==========================================
-  // FECHA PARA LA TARJETA VISUAL
-  // ==========================================
-
-  updateExpiryDate(): void {
-
-    const month =
-      this.subscriptionForm
-        .get('expiryMonth')
-        ?.value;
-
-    const year =
-      this.subscriptionForm
-        .get('expiryYear')
-        ?.value;
-
-    if (!month || !year) {
-
-      this.expiryDate = '';
+      this.isLoading =
+        false;
 
       return;
     }
 
-    const shortYear =
-      String(year).slice(-2);
+    this.subscriptionsService
+      .getSubscription(
+        this.subscriptionId,
+      )
+      .pipe(
+        takeUntil(this.destroy$),
+      )
+      .subscribe({
 
-    this.expiryDate =
-      `${month}/${shortYear}`;
+        next: (
+          response,
+        ) => {
+
+          this.subscription =
+            response.data;
+
+          this.isLoading =
+            false;
+
+          const status =
+            response.data.status;
+
+          /*
+           * ======================================
+           * SUSCRIPCIÓN YA ACTIVA
+           * ======================================
+           *
+           * Puede ocurrir que el webhook haya
+           * procesado el pago antes de que Angular
+           * haga esta consulta.
+           */
+
+          if (
+            status === 'ACTIVE'
+          ) {
+
+            this.handlePaymentApproved();
+
+            return;
+          }
+
+          /*
+           * ======================================
+           * PAGO PENDIENTE
+           * ======================================
+           *
+           * Si venimos de Wompi comenzamos
+           * inmediatamente el polling.
+           */
+
+          if (
+            this.isPaymentReturn &&
+            (
+              status === 'PENDING' ||
+              status === 'TRIALING'
+            )
+          ) {
+
+            this.startPaymentPolling();
+
+            return;
+          }
+
+          /*
+           * ======================================
+           * SUSCRIPCIÓN NO ACTIVA
+           * ======================================
+           *
+           * Para el flujo normal dejamos disponible
+           * el formulario de Wompi.
+           */
+
+          if (
+            status === 'CANCELED' ||
+            status === 'EXPIRED'
+          ) {
+
+            this.paymentStatus =
+              'DECLINED';
+
+            this.isProcessing =
+              false;
+
+            this.isWaitingForPayment =
+              false;
+
+            this.errorMessage =
+              'La suscripción no está disponible para realizar el pago.';
+
+          }
+
+        },
+
+        error: (
+          error: unknown,
+        ) => {
+
+          console.error(
+            'Error cargando suscripción:',
+            error,
+          );
+
+          this.isLoading =
+            false;
+
+          this.isProcessing =
+            false;
+
+          this.isWaitingForPayment =
+            false;
+
+          this.paymentStatus =
+            'ERROR';
+
+          this.errorMessage =
+            'No fue posible consultar el estado de la suscripción.';
+
+        },
+
+      });
+
   }
 
   // ==========================================
-  // SUBMIT
+  // WOMPI SESSION
   // ==========================================
 
-  submit(): void {
+  private initializeSession(): void {
 
-  if (this.subscriptionForm.invalid) {
+    this.wompiService
+      .initializeSession()
+      .pipe(
+        takeUntil(this.destroy$),
+      )
+      .subscribe({
 
-    this.subscriptionForm.markAllAsTouched();
+        next: (
+          sessionId: string,
+        ) => {
 
-    return;
+          this.sessionId =
+            sessionId;
+
+          this.tryInitializeWidget();
+
+        },
+
+        error: (
+          error: unknown,
+        ) => {
+
+          console.error(
+            'Error inicializando Wompi:',
+            error,
+          );
+
+          this.errorMessage =
+            'No fue posible inicializar el sistema de pagos.';
+
+        },
+
+      });
+
   }
 
-  this.isSubmitting = true;
-
-  const formValue =
-    this.subscriptionForm.value;
-
-  const paymentData = {
-
-    plan: this.selectedPlan,
-
-    cardNumber:
-      formValue.cardNumber,
-
-    cardholderName:
-      formValue.cardholderName,
-
-    expiryMonth:
-      formValue.expiryMonth,
-
-    expiryYear:
-      formValue.expiryYear,
-
-    cvv:
-      formValue.cvv
-  };
-
-  console.log(
-    'Procesar suscripción:',
-    paymentData
-  );
-
   // ==========================================
-  // SIMULACIÓN DE PAGO EXITOSO
+  // ACCEPTANCE TOKENS
   // ==========================================
 
-  sessionStorage.removeItem(
-    'pending_registration'
-  );
+  private loadAcceptanceTokens(): void {
 
-  this.isSubmitting = false;
+    this.paymentsService
+      .getAcceptanceTokens()
+      .pipe(
+        takeUntil(this.destroy$),
+      )
+      .subscribe({
 
-  this.router.navigate([
-    '/app/dashboard'
-  ]);
-}
+        next: (
+          response,
+        ) => {
+
+          const data =
+            response.data;
+
+          this.acceptanceToken =
+            data.acceptanceToken;
+
+          this.acceptancePermalink =
+            data.acceptancePermalink;
+
+          this.personalDataAuthToken =
+            data.personalDataAuthToken;
+
+          this.personalDataAuthPermalink =
+            data.personalDataAuthPermalink;
+
+          this.tryInitializeWidget();
+
+        },
+
+        error: (
+          error: unknown,
+        ) => {
+
+          console.error(
+            'Error obteniendo tokens de aceptación:',
+            error,
+          );
+
+          this.errorMessage =
+            'No fue posible preparar los términos del pago.';
+
+        },
+
+      });
+
+  }
+
+  // ==========================================
+  // WOMPI WIDGET
+  // ==========================================
+
+  private tryInitializeWidget(): void {
+
+    /*
+     * Si regresamos de Wompi NO debemos
+     * crear nuevamente el widget.
+     */
+
+    if (
+      this.isPaymentReturn
+    ) {
+
+      return;
+    }
+
+    if (
+      this.widgetInitialized ||
+      !this.sessionId ||
+      !this.acceptanceToken ||
+      !this.personalDataAuthToken
+    ) {
+
+      return;
+    }
+
+    if (!this.wompiForm) {
+
+      setTimeout(() => {
+
+        this.tryInitializeWidget();
+
+      });
+
+      return;
+    }
+
+    this.initializeTokenizationWidget();
+
+  }
+
+  private async initializeTokenizationWidget(): Promise<void> {
+
+    if (
+      this.widgetInitialized ||
+      !this.wompiForm ||
+      this.isPaymentReturn
+    ) {
+
+      return;
+    }
+
+    try {
+
+      await this.wompiTokenizationService
+        .loadWidget();
+
+      const form =
+        this.wompiForm.nativeElement;
+
+      const existingScript =
+        form.querySelector(
+          'script[data-widget-operation="tokenize"]',
+        );
+
+      if (existingScript) {
+
+        this.widgetInitialized =
+          true;
+
+        return;
+      }
+
+      if (!this.subscriptionId) {
+
+        this.errorMessage =
+          'No se encontró la suscripción asociada al pago.';
+
+        return;
+      }
+
+      this.addHiddenInput(
+        form,
+        'subscriptionId',
+        this.subscriptionId,
+      );
+
+      this.addHiddenInput(
+        form,
+        'sessionId',
+        this.sessionId!,
+      );
+
+      const script =
+        document.createElement(
+          'script',
+        );
+
+      script.src =
+        'https://checkout.wompi.co/widget.js';
+
+      script.async =
+        true;
+
+      script.setAttribute(
+        'data-render',
+        'button',
+      );
+
+      script.setAttribute(
+        'data-widget-operation',
+        'tokenize',
+      );
+
+      script.setAttribute(
+        'data-public-key',
+        this.wompiTokenizationService
+          .getPublicKey(),
+      );
+
+      form.appendChild(
+        script,
+      );
+
+      this.widgetInitialized =
+        true;
+
+    } catch (
+      error: unknown
+    ) {
+
+      console.error(
+        'Error inicializando Widget Wompi:',
+        error,
+      );
+
+      this.errorMessage =
+        'No fue posible cargar el formulario seguro de Wompi.';
+
+    }
+
+  }
+
+  private addHiddenInput(
+    form: HTMLFormElement,
+    name: string,
+    value: string,
+  ): void {
+
+    const existing =
+      form.querySelector(
+        `input[name="${name}"]`,
+      );
+
+    if (existing) {
+
+      existing.setAttribute(
+        'value',
+        value,
+      );
+
+      return;
+    }
+
+    const input =
+      document.createElement(
+        'input',
+      );
+
+    input.type =
+      'hidden';
+
+    input.name =
+      name;
+
+    input.value =
+      value;
+
+    form.appendChild(
+      input,
+    );
+
+  }
+
+  // ==========================================
+  // PAYMENT
+  // ==========================================
+
+  canStartPayment(): boolean {
+
+    return !!this.subscriptionId &&
+      !!this.sessionId &&
+      !!this.acceptanceToken &&
+      !!this.personalDataAuthToken &&
+      this.wompiTermsAccepted &&
+      this.personalDataAccepted &&
+      !this.isProcessing &&
+      !this.isWaitingForPayment;
+
+  }
+
+  continueToPayment(): void {
+
+    this.errorMessage =
+      '';
+
+    if (
+      !this.wompiTermsAccepted
+    ) {
+
+      this.errorMessage =
+        'Debes aceptar los términos y condiciones de Wompi.';
+
+      return;
+    }
+
+    if (
+      !this.personalDataAccepted
+    ) {
+
+      this.errorMessage =
+        'Debes aceptar la autorización de tratamiento de datos personales.';
+
+      return;
+    }
+
+    if (!this.sessionId) {
+
+      this.errorMessage =
+        'La sesión de pago todavía no está disponible.';
+
+      return;
+    }
+
+    if (!this.acceptanceToken) {
+
+      this.errorMessage =
+        'No se obtuvo el token de aceptación de Wompi.';
+
+      return;
+    }
+
+    if (
+      !this.personalDataAuthToken
+    ) {
+
+      this.errorMessage =
+        'No se obtuvo la autorización de datos personales de Wompi.';
+
+      return;
+    }
+
+    this.isProcessing =
+      true;
+
+  }
+
+  // ==========================================
+  // WOMPI SUBMIT
+  // ==========================================
+
+  onWompiSubmit(
+    event: Event,
+  ): void {
+
+    if (!this.canStartPayment()) {
+
+      event.preventDefault();
+
+      this.errorMessage =
+        'Completa y acepta los datos requeridos antes de continuar.';
+
+      return;
+    }
+
+    this.errorMessage =
+      '';
+
+    this.isProcessing =
+      true;
+
+    this.isWaitingForPayment =
+      true;
+
+    this.paymentStatus =
+      'PENDING';
+
+  }
+
+  // ==========================================
+  // PAYMENT POLLING
+  // ==========================================
+
+  private startPaymentPolling(): void {
+
+    if (
+      !this.subscriptionId ||
+      this.pollingStarted
+    ) {
+
+      return;
+    }
+
+    this.pollingStarted =
+      true;
+
+    this.isPaymentReturn =
+      true;
+
+    this.isWaitingForPayment =
+      true;
+
+    this.isProcessing =
+      true;
+
+    this.paymentStatus =
+      'PENDING';
+
+    /*
+     * Primera consulta inmediata.
+     *
+     * Después consultamos cada 2 segundos.
+     *
+     * Máximo:
+     * 30 consultas.
+     */
+
+    this.subscriptionsService
+      .getSubscription(
+        this.subscriptionId,
+      )
+      .pipe(
+        catchError(
+          (
+            error: unknown,
+          ) => {
+
+            console.error(
+              'Error en consulta inicial del pago:',
+              error,
+            );
+
+            this.handlePollingError();
+
+            return EMPTY;
+          },
+        ),
+
+        switchMap((
+          response,
+        ) => {
+
+          this.updateSubscriptionFromPolling(
+            response.data,
+          );
+
+          /*
+           * Si ya está activa no necesitamos
+           * crear el interval.
+           */
+
+          if (
+            response.data.status === 'ACTIVE'
+          ) {
+
+            this.handlePaymentApproved();
+
+            return EMPTY;
+          }
+
+          return interval(2000).pipe(
+            switchMap(() =>
+              this.subscriptionsService
+                .getSubscription(
+                  this.subscriptionId!,
+                ),
+            ),
+            take(30),
+            takeWhile(
+              (
+                response,
+              ) => {
+
+                const status =
+                  response.data.status;
+
+                return (
+                  status === 'PENDING' ||
+                  status === 'TRIALING'
+                );
+
+              },
+              true,
+            ),
+          );
+
+        }),
+
+        takeUntil(
+          this.destroy$,
+        ),
+
+        catchError(
+          (
+            error: unknown,
+          ) => {
+
+            console.error(
+              'Error consultando estado de suscripción:',
+              error,
+            );
+
+            this.handlePollingError();
+
+            return EMPTY;
+          },
+        ),
+
+      )
+      .subscribe({
+
+        next: (
+          response,
+        ) => {
+
+          this.updateSubscriptionFromPolling(
+            response.data,
+          );
+
+          const status =
+            response.data.status;
+
+          if (
+            status === 'ACTIVE'
+          ) {
+
+            this.handlePaymentApproved();
+
+            return;
+          }
+
+          if (
+            status === 'CANCELED' ||
+            status === 'EXPIRED'
+          ) {
+
+            this.paymentStatus =
+              'DECLINED';
+
+            this.isWaitingForPayment =
+              false;
+
+            this.isProcessing =
+              false;
+
+            this.errorMessage =
+              'El pago no pudo ser confirmado. Puedes intentar nuevamente.';
+
+          }
+
+        },
+
+        complete: () => {
+
+          /*
+           * Si ya fue aprobado no hacemos nada.
+           */
+
+          if (
+            this.paymentStatus ===
+            'APPROVED'
+          ) {
+
+            return;
+          }
+
+          /*
+           * Si sigue pendiente después del
+           * tiempo máximo, dejamos el estado
+           * visible al usuario.
+           */
+
+          if (
+            this.subscription?.status ===
+              'PENDING' ||
+            this.subscription?.status ===
+              'TRIALING'
+          ) {
+
+            this.isWaitingForPayment =
+              false;
+
+            this.isProcessing =
+              false;
+
+            this.paymentStatus =
+              'PENDING';
+
+            this.errorMessage =
+              'El pago todavía está siendo procesado. Puedes consultar nuevamente en unos momentos.';
+
+          }
+
+        },
+
+      });
+
+  }
+
+  private updateSubscriptionFromPolling(
+    subscription: Subscription,
+  ): void {
+
+    this.subscription =
+      subscription;
+
+  }
+
+  private handlePollingError(): void {
+
+    this.paymentStatus =
+      'ERROR';
+
+    this.isWaitingForPayment =
+      false;
+
+    this.isProcessing =
+      false;
+
+    this.errorMessage =
+      'No fue posible consultar el estado del pago.';
+
+  }
+
+  // ==========================================
+  // PAYMENT APPROVED
+  // ==========================================
+
+  private handlePaymentApproved(): void {
+
+    /*
+     * Evitamos ejecutar la navegación más
+     * de una vez.
+     */
+
+    if (
+      this.paymentStatus ===
+      'APPROVED'
+    ) {
+
+      return;
+    }
+
+    this.paymentStatus =
+      'APPROVED';
+
+    this.isWaitingForPayment =
+      false;
+
+    this.isProcessing =
+      false;
+
+    /*
+     * El estado temporal del registro ya no
+     * es necesario.
+     */
+
+    this.registrationState.clear();
+
+    /*
+     * IMPORTANTE:
+     *
+     * La ruta protegida de tu aplicación es:
+     *
+     * /app/dashboard
+     *
+     * NO:
+     *
+     * /dashboard
+     */
+
+    this.redirectTimeoutId =
+      setTimeout(() => {
+
+        this.router.navigate([
+          '/app/dashboard',
+        ]);
+
+      }, 1000);
+
+  }
+
+  // ==========================================
+  // FORMATTERS
+  // ==========================================
+
+  get formattedPrice(): string {
+
+    if (
+      !this.subscription?.plan?.priceAmount
+    ) {
+
+      return '$0';
+
+    }
+
+    const amount =
+      Number(
+        this.subscription
+          .plan
+          .priceAmount,
+      );
+
+    return new Intl.NumberFormat(
+      'es-CO',
+      {
+        style:
+          'currency',
+
+        currency:
+          this.subscription
+            .plan
+            .currency ||
+          'COP',
+
+        maximumFractionDigits:
+          0,
+      },
+    ).format(
+      amount,
+    );
+
+  }
+
+  get planName(): string {
+
+    return this.subscription
+      ?.plan
+      ?.name ||
+      'Plan';
+
+  }
+
+  get billingInterval(): string {
+
+    if (
+      this.subscription
+        ?.plan
+        ?.billingInterval ===
+      'YEAR'
+    ) {
+
+      return 'año';
+
+    }
+
+    return 'mes';
+
+  }
+
+  get isPaymentReady(): boolean {
+
+    return !!this.sessionId &&
+      !!this.acceptanceToken &&
+      !!this.personalDataAuthToken;
+
+  }
+
+  get paymentMessage(): string {
+
+    switch (
+      this.paymentStatus
+    ) {
+
+      case 'PENDING':
+
+        return 'Estamos verificando tu pago con Wompi. No cierres esta ventana.';
+
+      case 'APPROVED':
+
+        return 'Pago aprobado. Activando tu suscripción...';
+
+      case 'DECLINED':
+
+        return 'El pago fue rechazado. Puedes intentar nuevamente.';
+
+      case 'ERROR':
+
+        return 'Ocurrió un error procesando el pago.';
+
+      default:
+
+        return '';
+
+    }
+
+  }
+
 }

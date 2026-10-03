@@ -93,14 +93,7 @@
         @if (currentStep === 1) {
           <div class="register-step">
             <div class="register-step__icon">
-
-              <img
-
-    [src]="'assets/icons/greetings.svg'"
-
-    
-
-  />
+              <img [src]="'assets/icons/greetings.svg'" />
             </div>
 
             <div class="register-step__intro">
@@ -143,13 +136,7 @@
         @if (currentStep === 2) {
           <div class="register-step">
             <div class="register-step__icon">
-              <img
-
-    [src]="'assets/icons/flatware.svg'"
-
-    
-
-  />
+              <img [src]="'assets/icons/flatware.svg'" />
             </div>
 
             <div class="register-step__intro">
@@ -189,19 +176,19 @@
             <div class="form-field">
               <label for="cuisine"> Tipo de cocina </label>
 
-              <select id="cuisine" formControlName="cuisine">
+              <select id="cuisine" formControlName="cuisineCode">
                 <option value="" disabled>Selecciona una opción</option>
 
-                @for (cuisine of cuisines; track cuisine.value) {
-                  <option [value]="cuisine.value">
-                    {{ cuisine.label }}
+                @for (cuisine of cuisines; track cuisine.code) {
+                  <option [value]="cuisine.code">
+                    {{ cuisine.name }}
                   </option>
                 }
               </select>
 
               @if (
-                registerForm.get("cuisine")?.touched &&
-                registerForm.get("cuisine")?.invalid
+                registerForm.get("cuisineCode")?.touched &&
+                registerForm.get("cuisineCode")?.invalid
               ) {
                 <span class="form-error"> Selecciona el tipo de cocina. </span>
               }
@@ -259,13 +246,7 @@
         @if (currentStep === 3) {
           <div class="register-step">
             <div class="register-step__icon">
-              <img
-
-    [src]="'assets/icons/globe_location.svg'"
-
-    
-
-  />
+              <img [src]="'assets/icons/globe_location.svg'" />
             </div>
 
             <div class="register-step__intro">
@@ -427,13 +408,8 @@
                 </div>
 
                 <span class="location-preview__icon">
-                  <img
-
-    [src]="'assets/icons/pindrop.svg'"
-
-    
-
-  /> </span>
+                  <img [src]="'assets/icons/pindrop.svg'" />
+                </span>
               </div>
 
               <!-- MAP -->
@@ -475,13 +451,7 @@
         @if (currentStep === 4) {
           <div class="register-step">
             <div class="register-step__icon">
-              <img
-
-    [src]="'assets/icons/link.svg'"
-
-    
-
-  />
+              <img [src]="'assets/icons/link.svg'" />
             </div>
 
             <div class="register-step__intro">
@@ -498,17 +468,24 @@
             <div class="form-field">
               <label for="priceRange"> Rango de precios </label>
 
-              <select id="priceRange" formControlName="priceRange">
+              <select id="priceRange" formControlName="priceRangeCode">
                 <option value="" disabled>Selecciona un rango</option>
 
-                <option value="$">$ · Económico</option>
-
-                <option value="$$">$$ · Moderado</option>
-
-                <option value="$$$">$$$ · Premium</option>
-
-                <option value="$$$$">$$$$ · Alta cocina</option>
+                @for (priceRange of priceRanges; track priceRange.code) {
+                  <option [value]="priceRange.code">
+                    {{ priceRange.symbol }} · {{ priceRange.name }}
+                  </option>
+                }
               </select>
+
+              @if (
+                registerForm.get("priceRangeCode")?.touched &&
+                registerForm.get("priceRangeCode")?.invalid
+              ) {
+                <span class="form-error">
+                  Selecciona un rango de precios.
+                </span>
+              }
             </div>
 
             <!-- WEBSITE -->
@@ -565,7 +542,7 @@
             <!-- INFO -->
 
             <div class="form-info">
-              <span> <img src="assets/icons/computer.svg"> </span>
+              <span> <img src="assets/icons/computer.svg" /> </span>
 
               <p>
                 Estos datos nos ayudarán a crear la página pública de tu
@@ -583,13 +560,7 @@
         @if (currentStep === 5) {
           <div class="register-step">
             <div class="register-step__icon">
-              <img
-
-    [src]="'assets/icons/account.svg'"
-
-    
-
-  />
+              <img [src]="'assets/icons/account.svg'" />
             </div>
 
             <div class="register-step__intro">

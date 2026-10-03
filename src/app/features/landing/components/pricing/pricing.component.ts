@@ -1,75 +1,67 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { DecimalPipe } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 
-type PlanType = 'starter' | 'pro' | 'business';
-
-interface PricingPlan {
-  id: PlanType;
-  name: string;
-  description: string;
-  price: string;
-  period: string;
-  features: string[];
-  buttonText: string;
-  featured: boolean;
-}
+import { RegistrationStateService } from '../../../../core/services/auth/registration-state.service';
+import { PlansService } from '../../../../core/services/plans/plans.service';
+import { Plan } from '../../../../core/models/plan.model';
 
 @Component({
   selector: 'app-pricing',
   standalone: true,
-  imports: [RouterLink],
+  imports: [
+    DecimalPipe
+  ],
   templateUrl: './pricing.component.html',
   styleUrl: './pricing.component.scss'
 })
-export class PricingComponent {
+export class PricingComponent implements OnInit {
 
-  plans: PricingPlan[] = [
-    {
-      id: 'starter',
-      name: 'Starter',
-      description: 'Para restaurantes que están comenzando.',
-      price: '0',
-      period: 'mes',
-      features: [
-        'Hasta 3 promociones activas',
-        'Códigos QR',
-        'Canjes verificados',
-        'Analíticas básicas'
-      ],
-      buttonText: 'Empezar gratis',
-      featured: false
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      description: 'Para restaurantes que quieren crecer.',
-      price: '39',
-      period: 'mes',
-      features: [
-        'Promociones ilimitadas',
-        'Códigos QR personalizados',
-        'Analíticas avanzadas',
-        'Segmentación de clientes',
-        'Usuarios y roles'
-      ],
-      buttonText: 'Empezar ahora',
-      featured: true
-    },
-    {
-      id: 'business',
-      name: 'Business',
-      description: 'Para equipos y operaciones más grandes.',
-      price: '89',
-      period: 'mes',
-      features: [
-        'Todo lo incluido en Pro',
-        'Múltiples restaurantes',
-        'Reportes avanzados',
-        'Gestión de equipos',
-        'Soporte prioritario'
-      ],
-      buttonText: 'Contactar',
-      featured: false
+  plans: Plan[] = [];
+
+  isLoading = true;
+  hasError = false;
+
+  constructor(
+    private readonly router: Router,
+    private readonly plansService: PlansService,
+    private readonly registrationState: RegistrationStateService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadPlans();
+  }
+
+  private loadPlans(): void {
+    this.isLoading = true;
+    this.hasError = false;
+
+    this.plansService.getPlans().subscribe({
+      next: (response) => {
+        this.plans = response.data;
+        this.isLoading = false;
+      },
+
+      error: (error) => {
+        console.error('Error cargando los planes:', error);
+
+        this.hasError = true;
+        this.isLoading = false;
+      }
+    });
+  }
+
+  selectPlan(planCode: string): void {
+    if (
+      planCode !== 'starter' &&
+      planCode !== 'pro' &&
+      planCode !== 'business'
+    ) {
+      return;
     }
-  ];
+
+    this.registrationState.setSelectedPlan(planCode);
+
+    this.router.navigate(['/auth/register']);
+  }
 }

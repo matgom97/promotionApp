@@ -1,32 +1,62 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild
+} from '@angular/core';
+
+import { DecimalPipe } from '@angular/common';
+
 import {
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
+
 import {
-  ActivatedRoute,
   Router,
   RouterLink
 } from '@angular/router';
 
-import { DecimalPipe } from '@angular/common';
+import { forkJoin } from 'rxjs';
+
+import {
+  RegistrationStateService,
+  PlanCode
+} from '../../../../core/services/auth/registration-state.service';
+
+import {
+  AuthService,
+  RegisterRequest
+} from '../../../../core/services/auth/auth.service';
+
+import {
+  AuthStateService
+} from '../../../../core/services/auth/auth-state.service';
+
+import {
+  Cuisine,
+  CuisinesService
+} from '../../../../core/services/catalogs/cuisines/cuisines.service';
+
+import {
+  PriceRange,
+  PriceRangesService
+} from '../../../../core/services/catalogs/priceRange/price-range.service';
 
 import * as L from 'leaflet';
-
-
-
-type PlanType = 'starter' | 'pro' | 'business';
 
 interface RegisterStep {
   number: number;
   label: string;
 }
 
-interface CuisineOption {
-  value: string;
-  label: string;
+interface SelectedLocation {
+  lat: number;
+  lng: number;
 }
 
 @Component({
@@ -40,63 +70,38 @@ interface CuisineOption {
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss'
 })
-export class RegisterComponent implements OnInit {
+export class RegisterComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
-  // ==========================================
-  // MAPA
-  // ==========================================
   @ViewChild('map')
-  mapElement!: ElementRef<HTMLDivElement>;
-
-  private map?: L.Map;
-  private marker?: L.Marker;
-
-  isSearchingLocation = false;
-
-  selectedLocation: {
-    lat: number;
-    lng: number;
-  } | null = null;
-
-  // ==========================================
-  // FORMULARIO
-  // ==========================================
+  mapElement?: ElementRef<HTMLDivElement>;
 
   registerForm!: FormGroup;
 
-
-  // ==========================================
-  // PLAN
-  // ==========================================
-
-  selectedPlan: PlanType = 'starter';
-
-  planName = 'Starter';
-
-  planDescription =
-    'Comienza gratis y crea tus primeras promociones para tu restaurante.';
-
-
-  // ==========================================
-  // ESTADO
-  // ==========================================
+  selectedPlan: PlanCode | null = null;
 
   isSubmitting = false;
-
-
-  // ==========================================
-  // WIZARD
-  // ==========================================
 
   currentStep = 1;
 
   totalSteps = 5;
 
+  isSearchingLocation = false;
+
+  isLoadingCatalogs = false;
+
+  catalogsError = false;
+
+  selectedLocation: SelectedLocation | null = null;
+
+  private map?: L.Map;
+
+  private marker?: L.Marker;
 
   steps: RegisterStep[] = [
     {
       number: 1,
-      label: 'Tú'
+      label: 'Tus datos'
     },
     {
       number: 2,
@@ -108,7 +113,7 @@ export class RegisterComponent implements OnInit {
     },
     {
       number: 4,
-      label: 'Visibilidad'
+      label: 'Información pública'
     },
     {
       number: 5,
@@ -116,115 +121,64 @@ export class RegisterComponent implements OnInit {
     }
   ];
 
+  cuisines: Cuisine[] = [];
 
-  // ==========================================
-  // TIPOS DE COCINA
-  // ==========================================
-
-  cuisines: CuisineOption[] = [
-
-    {
-      value: 'colombian',
-      label: 'Colombiana'
-    },
-
-    {
-      value: 'parrilla',
-      label: 'Parrilla'
-    },
-
-    {
-      value: 'italian',
-      label: 'Italiana'
-    },
-
-    {
-      value: 'mexican',
-      label: 'Mexicana'
-    },
-
-    {
-      value: 'asian',
-      label: 'Asiática'
-    },
-
-    {
-      value: 'seafood',
-      label: 'Mariscos'
-    },
-
-    {
-      value: 'fast-food',
-      label: 'Comida rápida'
-    },
-
-    {
-      value: 'cafe',
-      label: 'Café'
-    },
-
-    {
-      value: 'other',
-      label: 'Otra'
-    }
-
-  ];
-
+  priceRanges: PriceRange[] = [];
 
   constructor(
-    private fb: FormBuilder,
-    private route: ActivatedRoute,
-    private router: Router
-  ) { }
-
-
-  // ==========================================
-  // INIT
-  // ==========================================
+    private readonly fb: FormBuilder,
+    private readonly router: Router,
+    private readonly registrationState: RegistrationStateService,
+    private readonly authService: AuthService,
+    private readonly authState: AuthStateService,
+    private readonly cuisinesService: CuisinesService,
+    private readonly priceRangesService: PriceRangesService
+  ) {}
 
   ngOnInit(): void {
-
-    this.createForm();
-
+    this.initializeForm();
     this.loadPlan();
-
+    this.loadCatalogs();
   }
 
+  ngAfterViewInit(): void {
+    if (this.currentStep === 3) {
+      this.initializeMap();
+    }
+  }
 
-  // ==========================================
-  // CREAR FORMULARIO
-  // ==========================================
+  ngOnDestroy(): void {
+    this.map?.remove();
+  }
 
-  private createForm(): void {
+  /*
+   * ============================================================
+   * FORM
+   * ============================================================
+   */
 
+  private initializeForm(): void {
     this.registerForm = this.fb.group({
-
-      // ========================================
-      // PASO 1
-      // ========================================
 
       name: [
         '',
         [
           Validators.required,
-          Validators.minLength(2)
+          Validators.minLength(2),
+          Validators.maxLength(100)
         ]
       ],
-
-
-      // ========================================
-      // PASO 2
-      // ========================================
 
       restaurantName: [
         '',
         [
           Validators.required,
-          Validators.minLength(2)
+          Validators.minLength(2),
+          Validators.maxLength(150)
         ]
       ],
 
-      cuisine: [
+      cuisineCode: [
         '',
         Validators.required
       ],
@@ -239,26 +193,29 @@ export class RegisterComponent implements OnInit {
       ],
 
       phone: [
-        ''
+        '',
+        Validators.maxLength(30)
       ],
-
-
-      // ========================================
-      // PASO 3
-      // ========================================
 
       address: [
         '',
-        Validators.required
+        [
+          Validators.required,
+          Validators.maxLength(255)
+        ]
       ],
 
       city: [
         '',
-        Validators.required
+        [
+          Validators.required,
+          Validators.maxLength(100)
+        ]
       ],
 
       department: [
-        ''
+        '',
+        Validators.maxLength(100)
       ],
 
       latitude: [
@@ -269,38 +226,32 @@ export class RegisterComponent implements OnInit {
         null
       ],
 
-
-      // ========================================
-      // PASO 4
-      // ========================================
-
-      priceRange: [
+      priceRangeCode: [
         '',
         Validators.required
       ],
 
       website: [
-        ''
+        '',
+        Validators.maxLength(255)
       ],
 
       instagram: [
-        ''
+        '',
+        Validators.maxLength(100)
       ],
 
       facebook: [
-        ''
+        '',
+        Validators.maxLength(255)
       ],
-
-
-      // ========================================
-      // PASO 5
-      // ========================================
 
       email: [
         '',
         [
           Validators.required,
-          Validators.email
+          Validators.email,
+          Validators.maxLength(191)
         ]
       ],
 
@@ -308,7 +259,8 @@ export class RegisterComponent implements OnInit {
         '',
         [
           Validators.required,
-          Validators.minLength(6)
+          Validators.minLength(8),
+          Validators.maxLength(128)
         ]
       ],
 
@@ -316,112 +268,139 @@ export class RegisterComponent implements OnInit {
         false,
         Validators.requiredTrue
       ]
-
     });
-
   }
 
-
-  // ==========================================
-  // PLAN
-  // ==========================================
+  /*
+   * ============================================================
+   * PLAN
+   * ============================================================
+   */
 
   private loadPlan(): void {
+    const plan =
+      this.registrationState.getSelectedPlan();
 
-    this.route.queryParamMap.subscribe(params => {
+    if (!plan) {
+      this.router.navigate(['/']);
+      return;
+    }
 
-      const plan = params.get('plan');
-
-      if (
-        plan === 'starter' ||
-        plan === 'pro' ||
-        plan === 'business'
-      ) {
-
-        this.selectedPlan = plan;
-
-      } else {
-
-        this.selectedPlan = 'starter';
-
-      }
-
-      this.updatePlanInformation();
-
-    });
-
+    this.selectedPlan = plan;
   }
 
-
-  // ==========================================
-  // INFORMACIÓN DEL PLAN
-  // ==========================================
-
-  private updatePlanInformation(): void {
-
+  get planName(): string {
     switch (this.selectedPlan) {
 
       case 'starter':
-
-        this.planName = 'Starter';
-
-        this.planDescription =
-          'Comienza gratis y crea tus primeras promociones para tu restaurante.';
-
-        break;
-
+        return 'Starter';
 
       case 'pro':
-
-        this.planName = 'Pro';
-
-        this.planDescription =
-          '14 días de prueba del plan Pro. Agrega tu tarjeta para comenzar.';
-
-        break;
-
+        return 'Pro';
 
       case 'business':
+        return 'Business';
 
-        this.planName = 'Business';
-
-        this.planDescription =
-          'Activa el plan Business agregando una tarjeta para comenzar.';
-
-        break;
-
+      default:
+        return '';
     }
-
   }
 
+  get planDescription(): string {
+    switch (this.selectedPlan) {
 
-  // ==========================================
-  // ¿REQUIERE PAGO?
-  // ==========================================
+      case 'starter':
+        return 'Comienza gratis y crea tus primeras promociones para tu restaurante.';
+
+      case 'pro':
+        return 'Para restaurantes que quieren crecer con herramientas avanzadas.';
+
+      case 'business':
+        return 'Para equipos y operaciones más grandes.';
+
+      default:
+        return '';
+    }
+  }
 
   requiresPayment(): boolean {
-
     return this.selectedPlan !== 'starter';
-
   }
 
+  /*
+   * ============================================================
+   * PLAN VALIDATION
+   * ============================================================
+   */
 
-  // ==========================================
-  // TÍTULO DEL PASO
-  // ==========================================
+  private isValidPlanCode(
+    value: string
+  ): value is PlanCode {
+    return (
+      value === 'starter' ||
+      value === 'pro' ||
+      value === 'business'
+    );
+  }
+
+  /*
+   * ============================================================
+   * CATALOGS
+   * ============================================================
+   */
+
+  private loadCatalogs(): void {
+    this.isLoadingCatalogs = true;
+    this.catalogsError = false;
+
+    forkJoin({
+      cuisines:
+        this.cuisinesService.getCuisines(),
+
+      priceRanges:
+        this.priceRangesService.getPriceRanges()
+    }).subscribe({
+      next: (response) => {
+
+        this.cuisines =
+          response.cuisines.data;
+
+        this.priceRanges =
+          response.priceRanges.data;
+
+        this.isLoadingCatalogs = false;
+      },
+
+      error: (error) => {
+
+        console.error(
+          'Error cargando catálogos:',
+          error
+        );
+
+        this.catalogsError = true;
+        this.isLoadingCatalogs = false;
+      }
+    });
+  }
+
+  /*
+   * ============================================================
+   * STEP INFORMATION
+   * ============================================================
+   */
 
   get currentStepTitle(): string {
-
     switch (this.currentStep) {
 
       case 1:
-        return 'Crea tu cuenta';
+        return 'Crea tu restaurante en PromoTable';
 
       case 2:
-        return 'Tu restaurante';
+        return 'Cuéntanos sobre tu restaurante';
 
       case 3:
-        return 'Encuentra tu restaurante';
+        return '¿Dónde está tu restaurante?';
 
       case 4:
         return 'Haz que te encuentren';
@@ -431,259 +410,221 @@ export class RegisterComponent implements OnInit {
 
       default:
         return 'Crea tu cuenta';
-
     }
-
   }
 
-
-  // ==========================================
-  // DESCRIPCIÓN DEL PASO
-  // ==========================================
-
   get currentStepDescription(): string {
-
     switch (this.currentStep) {
 
       case 1:
-        return 'Empecemos con algunos datos sobre ti.';
+        return 'Comencemos con tus datos personales.';
 
       case 2:
-        return 'Cuéntanos un poco sobre tu restaurante.';
+        return 'Cuéntanos un poco sobre el restaurante que administrarás.';
 
       case 3:
-        return 'Indícanos dónde pueden encontrarte tus clientes.';
+        return 'Ayuda a tus clientes a encontrar fácilmente tu restaurante.';
 
       case 4:
-        return 'Completa la información que mostraremos públicamente.';
+        return 'Agrega la información pública de tu restaurante.';
 
       case 5:
-        return this.planDescription;
+        return 'Crea tus credenciales para administrar tu restaurante.';
 
       default:
-        return this.planDescription;
-
+        return '';
     }
-
   }
 
-
-  // ==========================================
-  // PORCENTAJE DE PROGRESO
-  // ==========================================
-
   get progressPercentage(): number {
+    if (this.totalSteps <= 1) {
+      return 100;
+    }
 
-    return (
+    return Math.round(
       ((this.currentStep - 1) /
         (this.totalSteps - 1)) *
       100
     );
-
   }
 
-
-  // ==========================================
-  // SIGUIENTE PASO
-  // ==========================================
+  /*
+   * ============================================================
+   * NAVIGATION
+   * ============================================================
+   */
 
   nextStep(): void {
-
-    if (!this.validateCurrentStep()) {
+    if (this.currentStep >= this.totalSteps) {
       return;
     }
 
-    if (this.currentStep < this.totalSteps) {
+    if (!this.isCurrentStepValid()) {
+      this.markCurrentStepAsTouched();
+      return;
+    }
 
-      this.currentStep++;
+    this.currentStep++;
 
-      if (this.currentStep === 3) {
-        setTimeout(() => {
-          this.initializeMap();
-        });
-      }
+    if (this.currentStep === 3) {
+      setTimeout(() => {
+        this.initializeMap();
+      });
+    }
+
+    if (this.currentStep === 3) {
+      setTimeout(() => {
+        this.map?.invalidateSize();
+      }, 100);
     }
   }
-
-
-  // ==========================================
-  // PASO ANTERIOR
-  // ==========================================
 
   previousStep(): void {
+    if (this.currentStep <= 1) {
+      return;
+    }
 
-    if (this.currentStep > 1) {
+    this.currentStep--;
 
-      this.currentStep--;
+    if (this.currentStep === 3) {
+      setTimeout(() => {
+        this.map?.invalidateSize();
+      }, 100);
+    }
+  }
+
+  goToStep(step: number): void {
+    if (
+      step < 1 ||
+      step > this.totalSteps
+    ) {
+      return;
+    }
+
+    if (step === this.currentStep) {
+      return;
+    }
+
+    if (step < this.currentStep) {
+      this.currentStep = step;
 
       if (this.currentStep === 3) {
         setTimeout(() => {
           this.initializeMap();
+          this.map?.invalidateSize();
         });
       }
+
+      return;
+    }
+
+    if (!this.isCurrentStepValid()) {
+      this.markCurrentStepAsTouched();
+      return;
+    }
+
+    this.currentStep = step;
+
+    if (this.currentStep === 3) {
+      setTimeout(() => {
+        this.initializeMap();
+        this.map?.invalidateSize();
+      });
     }
   }
-  // ==========================================
-  // INICIALIZAR MAPA
-  // ==========================================
 
-  // ==========================================
-  // INICIALIZAR MAPA
-  // ==========================================
+  /*
+   * ============================================================
+   * VALIDATION
+   * ============================================================
+   */
 
-  private initializeMap(): void {
-  if (!this.mapElement?.nativeElement) {
-    console.warn('El elemento del mapa todavía no existe.');
-    return;
-  }
-
-  if (this.map) {
-    setTimeout(() => {
-      this.map?.invalidateSize({ pan: false });
-
-      // Si ya tenemos coordenadas seleccionadas, las mostramos
-      if (this.selectedLocation) {
-        this.updateMarker(
-          this.selectedLocation.lat,
-          this.selectedLocation.lng
-        );
-      }
-    }, 300);
-
-    return;
-  }
-
-  const defaultLat = 10.9685;
-  const defaultLng = -74.7813;
-
-  this.map = L.map(this.mapElement.nativeElement, {
-    center: [defaultLat, defaultLng],
-    zoom: 13,
-    zoomControl: true,
-    attributionControl: true
-  });
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(this.map);
-
-  // Esperar a que el contenedor sea completamente visible
-  setTimeout(() => {
-    this.map?.invalidateSize({ pan: false });
-
-    if (this.selectedLocation) {
-      this.updateMarker(
-        this.selectedLocation.lat,
-        this.selectedLocation.lng
-      );
-    }
-  }, 500);
-}
-
-  // ==========================================
-  // ESTABLECER UBICACIÓN
-  // ==========================================
-
-  private setLocation(
-    lat: number,
-    lng: number
-  ): void {
-
-    this.selectedLocation = {
-      lat,
-      lng
-    };
-
-    this.registerForm.patchValue({
-      latitude: lat,
-      longitude: lng
-    });
-  }
-
-
-  // ==========================================
-  // VALIDAR PASO ACTUAL
-  // ==========================================
-
-  private validateCurrentStep(): boolean {
-
-    let fields: string[] = [];
-
-
+  isCurrentStepValid(): boolean {
     switch (this.currentStep) {
 
-      // ========================================
-      // PASO 1
-      // ========================================
-
       case 1:
-
-        fields = [
+        return this.isStepValid([
           'name'
-        ];
-
-        break;
-
-
-      // ========================================
-      // PASO 2
-      // ========================================
+        ]);
 
       case 2:
-
-        fields = [
+        return this.isStepValid([
           'restaurantName',
-          'cuisine',
+          'cuisineCode',
           'description'
-        ];
-
-        break;
-
-
-      // ========================================
-      // PASO 3
-      // ========================================
+        ]);
 
       case 3:
-
-        fields = [
+        return this.isStepValid([
           'address',
           'city'
-        ];
-
-        break;
-
-
-      // ========================================
-      // PASO 4
-      // ========================================
+        ]);
 
       case 4:
-
-        fields = [
-          'priceRange'
-        ];
-
-        break;
-
-
-      // ========================================
-      // PASO 5
-      // ========================================
+        return this.isStepValid([
+          'priceRangeCode'
+        ]);
 
       case 5:
-
-        fields = [
+        return this.isStepValid([
           'email',
           'password',
           'terms'
-        ];
+        ]);
 
-        break;
-
+      default:
+        return false;
     }
+  }
 
+  private isStepValid(
+    fields: string[]
+  ): boolean {
+
+    return fields.every(field => {
+
+      const control =
+        this.registerForm.get(field);
+
+      return control
+        ? control.valid
+        : false;
+    });
+  }
+
+  private markCurrentStepAsTouched(): void {
+
+    const fieldsByStep:
+      Record<number, string[]> = {
+
+      1: [
+        'name'
+      ],
+
+      2: [
+        'restaurantName',
+        'cuisineCode',
+        'description'
+      ],
+
+      3: [
+        'address',
+        'city'
+      ],
+
+      4: [
+        'priceRangeCode'
+      ],
+
+      5: [
+        'email',
+        'password',
+        'terms'
+      ]
+    };
+
+    const fields =
+      fieldsByStep[this.currentStep] ?? [];
 
     fields.forEach(field => {
 
@@ -692,212 +633,153 @@ export class RegisterComponent implements OnInit {
         ?.markAsTouched();
 
     });
-
-
-    return fields.every(field => {
-
-      return this.registerForm
-        .get(field)
-        ?.valid;
-
-    });
-
   }
 
+  /*
+   * ============================================================
+   * MAP
+   * ============================================================
+   */
 
-  // ==========================================
-  // SUBMIT FINAL
-  // ==========================================
+  private initializeMap(): void {
 
-  submit(): void {
-
-    /*
-     * Verificamos todo el formulario,
-     * no solamente el paso actual.
-     */
-
-    if (this.registerForm.invalid) {
-
-      this.markAllFieldsAsTouched();
-
+    if (!this.mapElement?.nativeElement) {
       return;
-
     }
 
+    if (this.map) {
+      this.map.invalidateSize();
+      return;
+    }
 
-    this.isSubmitting = true;
+    const initialLatitude = 10.9878;
+    const initialLongitude = -74.7889;
 
-
-    // ==========================================
-    // DATOS COMPLETOS
-    // ==========================================
-
-    const registrationData = {
-
-      ...this.registerForm.value,
-
-      plan: this.selectedPlan
-
-    };
-
-
-    console.log(
-      'Registro completo:',
-      registrationData
+    this.map = L.map(
+      this.mapElement.nativeElement,
+      {
+        center: [
+          initialLatitude,
+          initialLongitude
+        ],
+        zoom: 13
+      }
     );
 
+    L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {
+        attribution:
+          '&copy; OpenStreetMap contributors'
+      }
+    ).addTo(this.map);
 
-    // ==========================================
-    // PRO / BUSINESS
-    // ==========================================
+    this.map.on(
+      'click',
+      (event: L.LeafletMouseEvent) => {
 
-    if (this.requiresPayment()) {
-
-      /*
-       * Guardamos temporalmente los datos
-       * necesarios para continuar al pago.
-       *
-       * IMPORTANTE:
-       * NO guardamos password.
-       * NO guardamos tarjeta.
-       * NO guardamos CVV.
-       */
-
-      const pendingRegistration = {
-
-        plan: this.selectedPlan,
-
-        name:
-          registrationData.name,
-
-        restaurantName:
-          registrationData.restaurantName,
-
-        cuisine:
-          registrationData.cuisine,
-
-        description:
-          registrationData.description,
-
-        phone:
-          registrationData.phone,
-
-        address:
-          registrationData.address,
-
-        city:
-          registrationData.city,
-
-        department:
-          registrationData.department,
-
-        latitude:
-          registrationData.latitude,
-
-        longitude:
-          registrationData.longitude,
-
-        priceRange:
-          registrationData.priceRange,
-
-        website:
-          registrationData.website,
-
-        instagram:
-          registrationData.instagram,
-
-        facebook:
-          registrationData.facebook,
-
-        email:
-          registrationData.email
-
-      };
-
-
-      sessionStorage.setItem(
-        'pending_registration',
-        JSON.stringify(
-          pendingRegistration
-        )
-      );
-
-
-      this.router.navigate(
-        ['/auth/subscription'],
-        {
-          queryParams: {
-            plan: this.selectedPlan
-          }
-        }
-      );
-
-      return;
-
-    }
-
-
-    // ==========================================
-    // STARTER
-    // ==========================================
-
-    /*
-     * Por ahora simulamos continuar
-     * al dashboard.
-     *
-     * Posteriormente:
-     *
-     * Register
-     *    ↓
-     * Laravel
-     *    ↓
-     * User + Restaurant
-     *    ↓
-     * Dashboard
-     */
-
-    this.router.navigate([
-      '/app/dashboard'
-    ]);
-
+        this.setMapLocation(
+          event.latlng.lat,
+          event.latlng.lng
+        );
+      }
+    );
   }
 
+  private setMapLocation(
+    latitude: number,
+    longitude: number
+  ): void {
 
-  // ==========================================
-  // MARCAR TODO COMO TOCADO
-  // ==========================================
+    this.selectedLocation = {
+      lat: latitude,
+      lng: longitude
+    };
 
-  private markAllFieldsAsTouched(): void {
-
-    Object.keys(
-      this.registerForm.controls
-    ).forEach(field => {
-
-      this.registerForm
-        .get(field)
-        ?.markAsTouched();
-
+    this.registerForm.patchValue({
+      latitude,
+      longitude
     });
 
+    const position = L.latLng(
+      latitude,
+      longitude
+    );
+
+    if (this.marker) {
+
+      this.marker.setLatLng(
+        position
+      );
+
+    } else if (this.map) {
+
+      this.marker =
+        L.marker(
+          position,
+          {
+            draggable: true
+          }
+        ).addTo(this.map);
+
+      this.marker.on(
+        'dragend',
+        () => {
+
+          if (!this.marker) {
+            return;
+          }
+
+          const location =
+            this.marker.getLatLng();
+
+          this.setMapLocation(
+            location.lat,
+            location.lng
+          );
+        }
+      );
+    }
+
+    this.map?.setView(
+      position,
+      16
+    );
   }
 
-  // ==========================================
-  // BUSCAR UBICACIÓN
-  // ==========================================
+  /*
+   * ============================================================
+   * LOCATION SEARCH
+   * ============================================================
+   */
 
-  async searchLocation(): Promise<void> {
-  const address = this.registerForm.get('address')?.value;
-  const city = this.registerForm.get('city')?.value;
-  const department = this.registerForm.get('department')?.value;
+  searchLocation(): void {
 
-  if (!address || !city) {
-    alert('Ingresa la dirección y la ciudad.');
-    return;
-  }
+    const addressControl =
+      this.registerForm.get('address');
 
-  this.isSearchingLocation = true;
+    const cityControl =
+      this.registerForm.get('city');
 
-  try {
+    const departmentControl =
+      this.registerForm.get('department');
+
+    const address =
+      addressControl?.value?.trim();
+
+    const city =
+      cityControl?.value?.trim();
+
+    const department =
+      departmentControl?.value?.trim();
+
+    if (!address) {
+      addressControl?.markAsTouched();
+      return;
+    }
+
+    this.isSearchingLocation = true;
+
     const query = [
       address,
       city,
@@ -908,126 +790,299 @@ export class RegisterComponent implements OnInit {
       .join(', ');
 
     const url =
-      `https://nominatim.openstreetmap.org/search` +
-      `?format=json` +
-      `&limit=1` +
-      `&countrycodes=co` +
-      `&q=${encodeURIComponent(query)}`;
+      'https://nominatim.openstreetmap.org/search';
 
-    const response = await fetch(url);
+    const params =
+      new URLSearchParams({
+        q: query,
+        format: 'json',
+        limit: '1',
+        countrycodes: 'co'
+      });
 
-    if (!response.ok) {
-      throw new Error('No fue posible buscar la dirección.');
-    }
+    fetch(
+      `${url}?${params.toString()}`,
+      {
+        headers: {
+          Accept:
+            'application/json'
+        }
+      }
+    )
+      .then(response => {
 
-    const results = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            'No fue posible consultar la ubicación.'
+          );
+        }
 
-    if (!results.length) {
-      alert('No encontramos esa dirección. Intenta con una dirección más específica.');
+        return response.json();
+      })
+      .then(
+        (
+          results: Array<{
+            lat: string;
+            lon: string;
+            display_name: string;
+          }>
+        ) => {
+
+          if (!results.length) {
+            throw new Error(
+              'No se encontró la ubicación.'
+            );
+          }
+
+          const latitude =
+            Number(results[0].lat);
+
+          const longitude =
+            Number(results[0].lon);
+
+          if (
+            Number.isNaN(latitude) ||
+            Number.isNaN(longitude)
+          ) {
+            throw new Error(
+              'La ubicación recibida no es válida.'
+            );
+          }
+
+          this.setMapLocation(
+            latitude,
+            longitude
+          );
+
+          this.registerForm.patchValue({
+            address
+          });
+        }
+      )
+      .catch(error => {
+
+        console.error(
+          'Error buscando ubicación:',
+          error
+        );
+
+      })
+      .finally(() => {
+
+        this.isSearchingLocation =
+          false;
+
+      });
+  }
+
+  /*
+   * ============================================================
+   * SUBMIT
+   * ============================================================
+   */
+
+  submit(): void {
+
+    if (this.isSubmitting) {
       return;
     }
 
-    const result = results[0];
-
-    const lat = Number(result.lat);
-    const lng = Number(result.lon);
-
-    console.log('Ubicación encontrada:', {
-      lat,
-      lng,
-      displayName: result.display_name
-    });
-
-    // Asegurarnos de que el mapa exista
-    if (!this.map) {
-      this.initializeMap();
-
-      await new Promise(resolve =>
-        setTimeout(resolve, 500)
-      );
+    if (!this.selectedPlan) {
+      this.router.navigate(['/']);
+      return;
     }
 
-    if (!this.map) {
-      throw new Error('No fue posible inicializar el mapa.');
+    if (
+      this.isLoadingCatalogs ||
+      this.catalogsError
+    ) {
+      return;
     }
 
-    // Crear/mover el marcador
-    this.updateMarker(lat, lng);
-
-  } catch (error) {
-    console.error('Error buscando ubicación:', error);
-
-    alert(
-      'No fue posible encontrar la ubicación. ' +
-      'Verifica la dirección e intenta nuevamente.'
-    );
-
-  } finally {
-    this.isSearchingLocation = false;
-  }
-}
-
-  // ==========================================
-  // ACTUALIZAR MARCADOR
-  // ==========================================
-
-  private updateMarker(lat: number, lng: number): void {
-  if (!this.map) {
-    return;
-  }
-
-  if (!this.marker) {
-    this.marker = L.marker(
-      [lat, lng],
-      {
-        draggable: true,
-        icon: this.createMarkerIcon()
-      }
-    ).addTo(this.map);
-
-    this.marker.on('dragend', () => {
-      if (!this.marker) {
-        return;
-      }
-
-      const position = this.marker.getLatLng();
-
-      this.setLocation(
-        position.lat,
-        position.lng
-      );
-    });
-  } else {
-    this.marker.setLatLng([lat, lng]);
-  }
-
-  this.map.setView(
-    [lat, lng],
-    17,
-    {
-      animate: true
+    if (this.registerForm.invalid) {
+      this.registerForm.markAllAsTouched();
+      return;
     }
-  );
 
-  this.setLocation(lat, lng);
+    this.isSubmitting = true;
 
-  setTimeout(() => {
-    this.map?.invalidateSize({ pan: false });
-  }, 200);
-}
+    const formValue =
+      this.registerForm.getRawValue();
 
-  private createMarkerIcon(): L.DivIcon {
-  return L.divIcon({
-    className: 'restaurant-map-marker',
-    html: `
-      <div class="restaurant-map-marker__pin">
-        <div class="restaurant-map-marker__dot"></div>
-      </div>
-    `,
-    iconSize: [40, 50],
-    iconAnchor: [20, 50],
-    popupAnchor: [0, -50]
-  });
-}
+    const request: RegisterRequest = {
 
+      name:
+        formValue.name,
+
+      email:
+        formValue.email,
+
+      password:
+        formValue.password,
+
+      terms:
+        formValue.terms,
+
+      restaurantName:
+        formValue.restaurantName,
+
+      cuisineCode:
+        formValue.cuisineCode,
+
+      description:
+        formValue.description,
+
+      phone:
+        formValue.phone ||
+        undefined,
+
+      address:
+        formValue.address,
+
+      city:
+        formValue.city,
+
+      department:
+        formValue.department ||
+        undefined,
+
+      latitude:
+        formValue.latitude ??
+        undefined,
+
+      longitude:
+        formValue.longitude ??
+        undefined,
+
+      priceRangeCode:
+        formValue.priceRangeCode,
+
+      website:
+        formValue.website ||
+        undefined,
+
+      instagram:
+        formValue.instagram ||
+        undefined,
+
+      facebook:
+        formValue.facebook ||
+        undefined,
+
+      planCode:
+        this.selectedPlan
+    };
+
+    this.authService
+      .register(request)
+      .subscribe({
+
+        next: (response) => {
+
+          /*
+           * El backend devuelve el plan como string.
+           *
+           * Validamos el valor antes de utilizarlo
+           * como PlanCode.
+           */
+          const planCode =
+            response.data.plan.code;
+
+          if (
+            !this.isValidPlanCode(
+              planCode
+            )
+          ) {
+
+            console.error(
+              'Plan recibido no válido:',
+              planCode
+            );
+
+            this.isSubmitting = false;
+
+            return;
+          }
+
+          this.registrationState
+            .setSelectedPlan(
+              planCode
+            );
+
+          this.registrationState
+            .setSubscriptionId(
+              response.data.subscription.id
+            );
+
+          /*
+           * El backend ya creó las cookies
+           * HttpOnly.
+           *
+           * Recuperamos la sesión mediante
+           * GET /auth/me.
+           */
+          this.authState.reset();
+
+          this.authState
+            .initialize()
+            .subscribe({
+
+              next: (
+                authenticated
+              ) => {
+
+                if (!authenticated) {
+
+                  this.isSubmitting =
+                    false;
+
+                  return;
+                }
+
+                /*
+                 * STARTER
+                 */
+                if (
+                  planCode ===
+                  'starter'
+                ) {
+
+                  this.registrationState
+                    .clear();
+
+                  this.router.navigate([
+                    '/app/dashboard'
+                  ]);
+
+                  return;
+                }
+
+                /*
+                 * PRO / BUSINESS
+                 */
+                this.router.navigate([
+                  '/auth/subscription'
+                ]);
+              },
+
+              error: () => {
+
+                this.isSubmitting =
+                  false;
+              }
+            });
+        },
+
+        error: (error) => {
+
+          console.error(
+            'Error registrando restaurante:',
+            error
+          );
+
+          this.isSubmitting =
+            false;
+        }
+      });
+  }
 }
