@@ -216,8 +216,8 @@
   align-items: center;
   justify-content: center;
 
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
 
   flex-shrink: 0;
 
@@ -226,9 +226,12 @@
   color: var(--color-success);
 
   background: var(--color-success-light);
+}
 
-  font-size: 12px;
-  font-weight: var(--font-weight-bold);
+/* El check conserva el verde de estado */
+
+.pricing-card__check app-icon {
+  color: var(--color-success);
 }
 
 

@@ -6,11 +6,14 @@ import { RegistrationStateService } from '../../../../core/services/auth/registr
 import { PlansService } from '../../../../core/services/plans/plans.service';
 import { Plan } from '../../../../core/models/plan.model';
 
+import { IconComponent } from '../../../../shared/icon/icon.component';
+
 @Component({
   selector: 'app-pricing',
   standalone: true,
   imports: [
-    DecimalPipe
+    DecimalPipe,
+    IconComponent
   ],
   templateUrl: './pricing.component.html',
   styleUrl: './pricing.component.scss'

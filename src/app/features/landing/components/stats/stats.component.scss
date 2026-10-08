@@ -70,7 +70,13 @@
     border-bottom: none;
   }
 
-  .stats__item strong {
+.stats__item app-icon {
+  margin-bottom: var(--space-3);
+
+  color: var(--color-primary-400);
+}
+
+.stats__item strong {
     font-size: var(--font-size-2xl);
   }
 }

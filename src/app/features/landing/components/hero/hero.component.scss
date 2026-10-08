@@ -98,6 +98,12 @@
   color: var(--color-primary-300);
 }
 
+/* La flecha va en blanco sobre el boton morado */
+
+.btn-primary app-icon {
+  color: var(--color-text-white);
+}
+
 /* ==========================================
    TITLE
    ========================================== */

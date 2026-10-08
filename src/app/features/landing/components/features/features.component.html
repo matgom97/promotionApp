@@ -32,13 +32,10 @@
         <article class="feature-card">
 
           <div class="feature-card__icon">
-            <img
-
-    [src]="feature.icon"
-
-    [alt]="feature.title"
-
-  />
+            <app-icon
+              [name]="feature.icon"
+              [size]="33"
+            />
           </div>
 
           <div class="feature-card__content">

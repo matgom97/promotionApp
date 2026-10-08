@@ -1,16 +1,19 @@
 import { Component } from '@angular/core';
 
+import { IconComponent } from '../../../../shared/icon/icon.component';
+import { IconName } from '../../../../shared/icon/icons';
+
 interface Step {
   number: string;
   title: string;
   description: string;
-  icon: string;
+  icon: IconName;
 }
 
 @Component({
   selector: 'app-how-it-works',
   standalone: true,
-  imports: [],
+  imports: [IconComponent],
   templateUrl: './how-it-works.component.html',
   styleUrl: './how-it-works.component.scss'
 })
@@ -22,28 +25,28 @@ export class HowItWorksComponent {
       title: 'Crea tu promoción',
       description:
         'Define el descuento, beneficio, vigencia y condiciones de tu promoción.',
-      icon: 'assets/icons/promo.svg',
+      icon: 'sell'
     },
     {
       number: '02',
       title: 'Publica y comparte el QR',
       description:
         'Genera tu código QR y colócalo en tus mesas, redes sociales o canales digitales.',
-      icon: 'assets/icons/qr.svg',
+      icon: 'qr_code_2'
     },
     {
       number: '03',
       title: 'El cliente obtiene su código',
       description:
         'El cliente descubre la promoción, se registra y obtiene un código único.',
-      icon: 'assets/icons/check.svg',
+      icon: 'verified'
     },
     {
       number: '04',
       title: 'Valida y mide',
       description:
         'Valida el código en el restaurante y consulta los resultados de la promoción.',
-      icon: 'assets/icons/chart.svg',
+      icon: 'monitoring'
     }
   ];
 

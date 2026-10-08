@@ -25,7 +25,12 @@
     <div class="hero__content">
 
       <div class="hero__badge">
-        <span class="hero__badge-icon">✦</span>
+        <app-icon
+          class="hero__badge-icon"
+          name="auto_awesome"
+          [size]="23"
+          [weight]="600"
+        />
         <span>Nuevo · Canje verificado con código</span>
       </div>
 
@@ -47,7 +52,7 @@
           class="btn btn-primary"
         >
           Empezar gratis
-          <span>→</span>
+          <app-icon name="arrow_forward" [size]="23" />
         </a>
 
         <a

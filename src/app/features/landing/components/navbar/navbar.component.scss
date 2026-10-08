@@ -188,23 +188,10 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-
-  gap: 5px;
 }
 
-.navbar__menu span {
-  display: block;
-
-  width: 22px;
-  height: 2px;
-
-  background: #2d2142;
-
-  border-radius: 2px;
-
-  transition:
-    transform 0.25s ease,
-    opacity 0.25s ease;
+.navbar__menu:hover app-icon {
+  color: var(--color-primary-600);
 }
 
 

@@ -30,14 +30,14 @@
       class="navbar__menu"
       type="button"
       [attr.aria-expanded]="isMenuOpen"
-      aria-label="Abrir menú"
+      [attr.aria-label]="isMenuOpen ? 'Cerrar menú' : 'Abrir menú'"
       (click)="toggleMenu()"
     >
-      <span></span>
-
-      <span></span>
-
-      <span></span>
+      <app-icon
+        [name]="isMenuOpen ? 'close' : 'menu'"
+        [size]="29"
+        [weight]="600"
+      />
     </button>
   </div>
 

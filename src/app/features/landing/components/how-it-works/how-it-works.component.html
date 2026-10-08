@@ -41,8 +41,10 @@
             </div>
 
             <div class="step__icon">
-              <img
-                [src]="step.icon"
+              <app-icon
+                [name]="step.icon"
+                [size]="37"
+                [fill]="1"
               />
             </div>
 
@@ -59,7 +61,10 @@
           @if (!last) {
 
             <div class="how-it-works__connector">
-              <span>→</span>
+              <app-icon
+                name="arrow_forward"
+                [size]="23"
+              />
             </div>
 
           }

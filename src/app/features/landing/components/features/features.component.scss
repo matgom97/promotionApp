@@ -90,8 +90,12 @@
   background: var(--color-background-purple);
 
   color: var(--color-primary-500);
+}
 
-  font-size: 20px;
+/* FILL 0 -> 1 al pasar el cursor por la tarjeta */
+
+.feature-card:hover app-icon {
+  --icon-fill: 1;
 }
 
 .feature-card__content {

@@ -44,10 +44,12 @@
               {{ faq.question }}
             </span>
 
-            <span class="faq-item__icon">
-              {{ openIndex === i ? '−' : '+' }}
+<span class="faq-item__icon">
+              <app-icon
+                [name]="openIndex === i ? 'remove' : 'add'"
+                [size]="25"
+              />
             </span>
-
           </button>
 
 

@@ -1,5 +1,7 @@
 import { Component } from '@angular/core';
 
+import { IconComponent } from '../../../../shared/icon/icon.component';
+
 interface FaqItem {
   question: string;
   answer: string;
@@ -8,7 +10,7 @@ interface FaqItem {
 @Component({
   selector: 'app-faq',
   standalone: true,
-  imports: [],
+  imports: [IconComponent],
   templateUrl: './faq.component.html',
   styleUrl: './faq.component.scss'
 })

@@ -3,7 +3,11 @@
   <div class="promotion-card__header">
 
     <div class="promotion-card__icon">
-      {{ promotion.icon }}
+      <app-icon
+        [name]="promotion.icon"
+        [size]="29"
+        [fill]="1"
+      />
     </div>
 
     <div class="promotion-card__info">

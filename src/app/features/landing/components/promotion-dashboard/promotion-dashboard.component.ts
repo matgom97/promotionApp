@@ -5,10 +5,12 @@ import {
   PromotionCardComponent
 } from '../promotion-card/promotion-card.component';
 
+import { IconComponent } from '../../../../shared/icon/icon.component';
+
 @Component({
   selector: 'app-promotion-dashboard',
   standalone: true,
-  imports: [PromotionCardComponent],
+  imports: [PromotionCardComponent, IconComponent],
   templateUrl: './promotion-dashboard.component.html',
   styleUrl: './promotion-dashboard.component.scss'
 })
@@ -21,7 +23,7 @@ export class PromotionDashboardComponent {
       views: 1264,
       redemptions: 84,
       conversion: 6.6,
-      icon: '🍽️',
+      icon: 'restaurant',
       status: 'active'
     },
     {
@@ -30,7 +32,7 @@ export class PromotionDashboardComponent {
       views: 903,
       redemptions: 41,
       conversion: 4.5,
-      icon: '🔥',
+      icon: 'local_fire_department',
       status: 'active'
     },
     {
@@ -39,7 +41,7 @@ export class PromotionDashboardComponent {
       views: 612,
       redemptions: 63,
       conversion: 10.3,
-      icon: '🍰',
+      icon: 'cake',
       status: 'active'
     }
   ];

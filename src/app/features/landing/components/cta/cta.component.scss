@@ -114,11 +114,13 @@
     0 18px 40px rgba(0, 0, 0, 0.18);
 }
 
-.cta__button span {
+.cta__button app-icon {
+  color: var(--color-primary-700);
+
   transition: transform 0.2s ease;
 }
 
-.cta__button:hover span {
+.cta__button:hover app-icon {
   transform: translateX(4px);
 }
 

@@ -140,6 +140,22 @@
 
 
     /* =====================================================
+       ICONOS
+
+       Subconjunto de Material Symbols Rounded (18 iconos).
+       Para agregar un icono: validar el nombre en
+       https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/<nombre>/default/24px.svg
+       y regenerar el woff2 con la lista icon_names= (ver README).
+       ===================================================== */
+
+    --icon-size-xs: 16px;
+    --icon-size-sm: 20px;
+    --icon-size-md: 24px;
+    --icon-size-lg: 28px;
+    --icon-size-xl: 32px;
+
+
+    /* =====================================================
        LAYOUT
        ===================================================== */
 
@@ -219,6 +235,81 @@ img {
 a {
     color: inherit;
     text-decoration: none;
+}
+
+
+/* =========================================================
+   MATERIAL SYMBOLS ROUNDED (SUBCONJUNTO)
+   ========================================================= */
+
+@font-face {
+    font-family: 'Material Symbols Rounded';
+
+    font-style: normal;
+
+    font-weight: 100 700;
+
+    font-display: block;
+
+    src:
+        url('assets/fonts/MaterialSymbolsRounded-subset.woff2')
+        format('woff2');
+}
+
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+
+    font-weight: normal;
+
+    font-style: normal;
+
+    font-size: var(--icon-size-md);
+
+    line-height: 1;
+
+    letter-spacing: normal;
+
+    text-transform: none;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    white-space: nowrap;
+
+    word-wrap: normal;
+
+    direction: ltr;
+
+    -webkit-font-feature-settings: 'liga';
+
+    -webkit-font-smoothing: antialiased;
+
+    user-select: none;
+
+    color: inherit;
+
+    transition: font-variation-settings 0.2s ease;
+}
+
+/* Un contenedor puede forzar el relleno sin pasar por input:
+   .card:hover app-icon { --icon-fill: 1; } */
+app-icon {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    /* Morado de marca por defecto. Se sobreescribe con
+       app-icon { color: ... } dentro del componente. */
+    color: var(--color-primary-500);
 }
 
 
