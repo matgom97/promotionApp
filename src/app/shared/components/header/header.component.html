@@ -1,0 +1,102 @@
+<header class="app-header">
+  <div class="app-header__left">
+    <button
+      type="button"
+      class="app-header__menu-button"
+      aria-label="Abrir o cerrar navegación"
+      (click)="onToggleSidebar()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+      >
+        <path d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
+    <div class="app-header__location">
+      <label
+        for="restaurant-selector"
+        class="app-header__location-label"
+      >
+        Sede activa
+      </label>
+
+      <select
+        id="restaurant-selector"
+        class="app-header__restaurant-select"
+        [ngModel]="authState.activeRestaurantId()"
+        [disabled]="switchingRestaurant() || loggingOut()"
+        (ngModelChange)="onRestaurantChange($event)"
+      >
+        <option
+          *ngFor="let restaurant of authState.restaurants()"
+          [value]="restaurant.id"
+        >
+          {{ restaurant.name }}
+
+          <ng-container *ngIf="restaurant.city">
+            — {{ restaurant.city }}
+          </ng-container>
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <div class="app-header__right">
+    <div class="app-header__user">
+      <span class="app-header__user-name">
+        {{ workspaceState.user()?.firstName }}
+      </span>
+
+      <span class="app-header__user-role">
+        {{ workspaceState.workspace()?.role?.name }}
+      </span>
+    </div>
+
+    <div
+      class="app-header__avatar"
+      aria-hidden="true"
+    >
+      {{ workspaceState.user()?.firstName?.charAt(0) || 'U' }}
+    </div>
+
+    <button
+      type="button"
+      class="app-header__logout-button"
+      (click)="logout()"
+      [disabled]="loggingOut()"
+      [attr.aria-busy]="loggingOut()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+      >
+        <path
+          d="M10 17l5-5-5-5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M15 12H3"
+          stroke-linecap="round"
+        />
+        <path
+          d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+
+      <span>
+        {{ loggingOut() ? 'Cerrando sesión...' : 'Cerrar sesión' }}
+      </span>
+    </button>
+  </div>
+</header>

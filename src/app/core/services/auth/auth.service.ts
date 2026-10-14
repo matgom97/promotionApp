@@ -3,30 +3,53 @@ import { Observable } from 'rxjs';
 
 import { ApiService } from '../api/api.service';
 
+/**
+ * Usuario autenticado.
+ */
+export interface AuthUser {
+  id: string;
+  email: string;
+  firstName: string;
+  status: string;
+  createdAt?: string;
+}
 
+/**
+ * Membresía del usuario dentro de un restaurante.
+ */
+export interface RestaurantMembership {
+  id: string;
+  role: string;
+}
+
+/**
+ * Restaurante al que tiene acceso el usuario.
+ * Cada restaurante pertenece a una organización.
+ */
+export interface AuthRestaurant {
+  id: string;
+  organizationId: string;
+  name: string;
+  city: string;
+  status: string;
+  membership: RestaurantMembership;
+}
+
+/**
+ * Respuesta del endpoint GET auth/me.
+ */
 export interface MeResponse {
   message: string;
+
   data: {
-    user: {
-      id: string;
-      email: string;
-      firstName: string;
-      status: string;
-      createdAt: string;
-    };
-    restaurant: {
-      id: string;
-      name: string;
-      city: string;
-      status: string;
-    } | null;
-    membership: {
-      id: string;
-      role: string;
-    } | null;
+    user: AuthUser;
+    restaurants: AuthRestaurant[];
   };
 }
 
+/**
+ * Datos requeridos para registrar una cuenta y un restaurante.
+ */
 export interface RegisterRequest {
   name: string;
   email: string;
@@ -52,6 +75,9 @@ export interface RegisterRequest {
   planCode?: string;
 }
 
+/**
+ * Respuesta del endpoint auth/register.
+ */
 export interface RegisterResponse {
   message: string;
 
@@ -89,44 +115,43 @@ export interface RegisterResponse {
   };
 }
 
+/**
+ * Credenciales para iniciar sesión.
+ */
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
+/**
+ * Respuesta del endpoint POST auth/login.
+ */
 export interface LoginResponse {
   message: string;
 
   data: {
-    user: {
-      id: string;
-      email: string;
-      firstName: string;
-      status: string;
-    };
-
-    restaurant: {
-      id: string;
-      name: string;
-      city: string;
-      status: string;
-    };
-
-    membership: {
-      id: string;
-      role: string;
-    };
+    user: AuthUser;
+    restaurants: AuthRestaurant[];
   };
 }
 
+/**
+ * Servicio de autenticación.
+ *
+ * Centraliza las peticiones de registro, inicio de sesión,
+ * renovación de sesión, cierre de sesión y consulta del usuario.
+ */
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   constructor(
     private readonly api: ApiService,
-  ) { }
+  ) {}
 
+  /**
+   * Registra un usuario y su restaurante.
+   */
   register(
     data: RegisterRequest,
   ): Observable<RegisterResponse> {
@@ -136,6 +161,10 @@ export class AuthService {
     );
   }
 
+  /**
+   * Inicia sesión y obtiene los restaurantes
+   * a los que tiene acceso el usuario.
+   */
   login(
     data: LoginRequest,
   ): Observable<LoginResponse> {
@@ -145,15 +174,25 @@ export class AuthService {
     );
   }
 
+  /**
+   * Renueva la sesión autenticada.
+   */
   refresh(): Observable<unknown> {
     return this.api.post('auth/refresh');
   }
 
+  /**
+   * Cierra la sesión del usuario.
+   */
   logout(): Observable<unknown> {
     return this.api.post('auth/logout');
   }
 
+  /**
+   * Obtiene los datos del usuario autenticado
+   * y sus restaurantes disponibles.
+   */
   me(): Observable<MeResponse> {
-  return this.api.get<MeResponse>('auth/me');
-}
+    return this.api.get<MeResponse>('auth/me');
+  }
 }

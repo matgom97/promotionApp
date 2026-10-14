@@ -1,1 +1,73 @@
-<p>app-layout works!</p>
+<main class="app-layout">
+  <!-- Estado de carga inicial o cambio de sede -->
+  <section
+    *ngIf="workspaceState.loading()"
+    class="workspace-state"
+    aria-live="polite"
+  >
+    <div class="workspace-state__spinner" aria-hidden="true"></div>
+
+    <p class="workspace-state__message">
+      Cargando tu espacio de trabajo...
+    </p>
+  </section>
+
+  <!-- Estado de error -->
+  <section
+    *ngIf="!workspaceState.loading() && workspaceState.error() as errorMessage"
+    class="workspace-state workspace-state--error"
+    role="alert"
+  >
+    <p class="workspace-state__error-message">
+      {{ errorMessage }}
+    </p>
+
+    <button
+      type="button"
+      class="btn btn-primary workspace-state__retry"
+      (click)="retryWorkspace()"
+    >
+      Reintentar
+    </button>
+  </section>
+
+  <!-- Dashboard -->
+  <ng-container
+    *ngIf="!workspaceState.loading() && workspaceState.workspace() as workspace"
+  >
+    <div class="app-shell">
+      <!-- Fondo que cierra el menú móvil -->
+      <button
+        *ngIf="mobileMenuOpen()"
+        type="button"
+        class="app-shell__overlay"
+        aria-label="Cerrar menú de navegación"
+        (click)="closeMobileMenu()"
+      ></button>
+
+      <!-- Navegación lateral -->
+      <aside
+        class="app-shell__sidebar"
+        [class.app-shell__sidebar--collapsed]="sidebarCollapsed()"
+        [class.app-shell__sidebar--mobile-open]="mobileMenuOpen()"
+      >
+        <app-sidebar
+          [workspace]="workspace"
+          [collapsed]="sidebarCollapsed()"
+          (closeMenu)="closeMobileMenu()"
+        />
+      </aside>
+
+      <!-- Área principal -->
+      <div class="app-shell__main">
+        <app-header
+          (toggleSidebar)="toggleMobileMenu()"
+        />
+
+        <section class="app-shell__content">
+          <router-outlet />
+        </section>
+      </div>
+    </div>
+  </ng-container>
+</main>
