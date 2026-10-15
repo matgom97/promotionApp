@@ -2,12 +2,15 @@
 
   <!-- VIDEO DE FONDO -->
   <video
+    #heroVideo
     class="hero__video"
     autoplay
-    muted
-    
+    [muted]="true"
+    loop
     playsinline
-    preload="metadata"
+    preload="auto"
+    disablePictureInPicture
+    tabindex="-1"
     aria-hidden="true"
   >
     <source
