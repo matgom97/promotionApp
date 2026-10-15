@@ -158,14 +158,16 @@
                 </div>
               </div>
 
-              <div class="wompi-payment__widget">
-                <form
-                  #wompiForm
-                  method="POST"
-                  action="http://localhost:3000/api/v1/payments/wompi/token"
-                  (submit)="onWompiSubmit($event)"
-                ></form>
-              </div>
+             <div class="wompi-payment__widget">
+  <form
+    #wompiForm
+    method="POST"
+    action="http://localhost:3000/api/v1/payments/wompi/token"
+    target="wompi-payment-response"
+    (submit)="onWompiSubmit($event)"
+  ></form>
+
+</div>
             </div>
 
             <div class="payment-security">
@@ -197,6 +199,7 @@
               </div>
             </div>
 
+            <!-- TERMS -->
 
             @if (errorMessage) {
               <div class="payment-form__error">

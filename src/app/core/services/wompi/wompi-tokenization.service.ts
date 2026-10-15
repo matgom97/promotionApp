@@ -9,37 +9,65 @@ export class WompiTokenizationService {
   private readonly widgetUrl =
     'https://checkout.wompi.co/widget.js';
 
-  private widgetLoaded = false;
+  private widgetLoadPromise?: Promise<void>;
 
-  async loadWidget(): Promise<void> {
-    if (this.widgetLoaded) {
-      return;
+  loadWidget(): Promise<void> {
+    if (this.widgetLoadPromise) {
+      return this.widgetLoadPromise;
     }
 
-    const existingScript =
-      document.querySelector(
-        `script[src="${this.widgetUrl}"]`,
-      );
-
-    if (existingScript) {
-      this.widgetLoaded = true;
-      return;
-    }
-
-    await new Promise<void>(
+    this.widgetLoadPromise = new Promise<void>(
       (resolve, reject) => {
-        const script =
-          document.createElement('script');
+        const existingScript =
+          document.querySelector<HTMLScriptElement>(
+            `script[src="${this.widgetUrl}"]`,
+          );
+
+        if (existingScript) {
+          if (existingScript.dataset['loaded'] === 'true') {
+            resolve();
+            return;
+          }
+
+          existingScript.addEventListener(
+            'load',
+            () => {
+              existingScript.dataset['loaded'] = 'true';
+              resolve();
+            },
+            { once: true },
+          );
+
+          existingScript.addEventListener(
+            'error',
+            () => {
+              this.widgetLoadPromise = undefined;
+
+              reject(
+                new Error(
+                  'No se pudo cargar el Widget de Wompi.',
+                ),
+              );
+            },
+            { once: true },
+          );
+
+          return;
+        }
+
+        const script = document.createElement('script');
 
         script.src = this.widgetUrl;
         script.async = true;
 
         script.onload = () => {
-          this.widgetLoaded = true;
+          script.dataset['loaded'] = 'true';
           resolve();
         };
 
         script.onerror = () => {
+          this.widgetLoadPromise = undefined;
+
           reject(
             new Error(
               'No se pudo cargar el Widget de Wompi.',
@@ -50,6 +78,8 @@ export class WompiTokenizationService {
         document.head.appendChild(script);
       },
     );
+
+    return this.widgetLoadPromise;
   }
 
   getPublicKey(): string {

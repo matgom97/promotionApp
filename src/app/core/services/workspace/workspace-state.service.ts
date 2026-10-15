@@ -1,9 +1,10 @@
 import { Injectable, signal } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+
 import {
   catchError,
   finalize,
-  map,
   shareReplay,
   tap,
 } from 'rxjs/operators';
@@ -21,16 +22,25 @@ import { AuthStateService } from '../auth/auth-state.service';
   providedIn: 'root',
 })
 export class WorkspaceStateService {
-  private readonly workspaceState = signal<WorkspaceContext | null>(null);
-  private readonly workspaceUserState = signal<WorkspaceUser | null>(null);
+  private readonly workspaceState =
+    signal<WorkspaceContext | null>(null);
+
+  private readonly workspaceUserState =
+    signal<WorkspaceUser | null>(null);
+
   private readonly loadingState = signal(false);
-  private readonly errorState = signal<string | null>(null);
+
+  private readonly errorState =
+    signal<string | null>(null);
 
   private request$?: Observable<WorkspaceResponse>;
 
   readonly workspace = this.workspaceState.asReadonly();
+
   readonly user = this.workspaceUserState.asReadonly();
+
   readonly loading = this.loadingState.asReadonly();
+
   readonly error = this.errorState.asReadonly();
 
   constructor(
@@ -39,17 +49,28 @@ export class WorkspaceStateService {
   ) {}
 
   /**
-   * Carga el workspace correspondiente a la sede activa.
+   * Carga el workspace de la sede activa.
+   *
+   * Si la suscripción no está activa, el backend
+   * rechazará el acceso. La sesión se conserva,
+   * pero el workspace permanece vacío.
    */
   loadWorkspace(): Observable<WorkspaceResponse> {
-    const restaurantId = this.authState.activeRestaurantId();
+    const restaurantId =
+      this.authState.activeRestaurantId();
 
     if (!restaurantId) {
       this.clear();
 
-      throw new Error(
-        'No hay una sede seleccionada para cargar el workspace.',
+      return throwError(
+        () => new Error(
+          'No hay una sede seleccionada para cargar el workspace.',
+        ),
       );
+    }
+
+    if (this.request$) {
+      return this.request$;
     }
 
     this.loadingState.set(true);
@@ -59,23 +80,44 @@ export class WorkspaceStateService {
       .getWorkspace(restaurantId)
       .pipe(
         tap((response) => {
-          this.workspaceUserState.set(response.data.user);
-          this.workspaceState.set(response.data.workspace);
+          this.workspaceUserState.set(
+            response.data.user,
+          );
+
+          this.workspaceState.set(
+            response.data.workspace,
+          );
         }),
+
         catchError((error: unknown) => {
           this.workspaceState.set(null);
           this.workspaceUserState.set(null);
-          this.errorState.set(
-            'No fue posible cargar la información del workspace.',
-          );
 
-          throw error;
+          if (
+            error instanceof HttpErrorResponse &&
+            error.status === 403
+          ) {
+            this.errorState.set(
+              'Tu organización necesita una suscripción activa para acceder al workspace.',
+            );
+          } else {
+            this.errorState.set(
+              'No fue posible cargar la información del workspace.',
+            );
+          }
+
+          return throwError(() => error);
         }),
+
         finalize(() => {
           this.loadingState.set(false);
           this.request$ = undefined;
         }),
-        shareReplay(1),
+
+        shareReplay({
+          bufferSize: 1,
+          refCount: true,
+        }),
       );
 
     return this.request$;
@@ -84,12 +126,17 @@ export class WorkspaceStateService {
   /**
    * Cambia la sede activa y carga su workspace.
    */
-  selectRestaurant(restaurantId: string): Observable<WorkspaceResponse> {
-    const selected = this.authState.selectRestaurant(restaurantId);
+  selectRestaurant(
+    restaurantId: string,
+  ): Observable<WorkspaceResponse> {
+    const selected =
+      this.authState.selectRestaurant(restaurantId);
 
     if (!selected) {
-      throw new Error(
-        'No tienes acceso a la sede seleccionada.',
+      return throwError(
+        () => new Error(
+          'No tienes acceso a la sede seleccionada.',
+        ),
       );
     }
 
@@ -99,7 +146,7 @@ export class WorkspaceStateService {
   }
 
   /**
-   * Limpia el contexto del workspace.
+   * Limpia el workspace sin cerrar la sesión.
    */
   clear(): void {
     this.workspaceState.set(null);

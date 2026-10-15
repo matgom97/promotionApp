@@ -1,7 +1,5 @@
-<aside
-  class="app-sidebar"
-  [class.app-sidebar--collapsed]="collapsed()"
->
+<aside class="app-sidebar" [class.app-sidebar--collapsed]="collapsed()">
+  <!-- Marca -->
   <div class="app-sidebar__brand">
     <a
       routerLink="/app/dashboard"
@@ -9,57 +7,182 @@
       aria-label="PromoApp, ir al dashboard"
       (click)="onNavigate()"
     >
-      <span class="app-sidebar__brand-icon">P</span>
+      <span class="app-sidebar__brand-icon"> P </span>
 
-      <span
-        *ngIf="!collapsed()"
-        class="app-sidebar__brand-name"
-      >
+      <span *ngIf="!collapsed()" class="app-sidebar__brand-name">
         PromoApp
       </span>
     </a>
+
+    <button
+      type="button"
+      class="app-sidebar__collapse-button"
+      [attr.aria-label]="collapsed() ? 'Expandir menú' : 'Contraer menú'"
+      [attr.title]="collapsed() ? 'Expandir menú' : 'Contraer menú'"
+      [attr.aria-expanded]="!collapsed()"
+      (click)="onToggleCollapsed()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+      >
+        <path *ngIf="!collapsed()" d="m14 18-6-6 6-6" />
+
+        <path *ngIf="collapsed()" d="m10 18 6-6-6-6" />
+      </svg>
+    </button>
   </div>
 
+  <!-- Negocio activo -->
+  <!-- Selector de sedes -->
   <div
     *ngIf="workspace() as currentWorkspace"
-    class="app-sidebar__workspace"
+    class="app-sidebar__restaurant-selector"
   >
-    <span class="app-sidebar__workspace-label">
-      NEGOCIO ACTIVO
-    </span>
+    <!-- Sede actualmente seleccionada -->
+    <button
+      type="button"
+      class="app-sidebar__workspace"
+      [class.app-sidebar__workspace--collapsed]="collapsed()"
+      [class.app-sidebar__workspace--open]="restaurantSelectorOpen()"
+      [disabled]="switchingRestaurant()"
+      [attr.aria-expanded]="restaurantSelectorOpen()"
+      aria-haspopup="listbox"
+      [attr.aria-label]="
+        'Sede activa: ' +
+        currentWorkspace.restaurant.name +
+        '. Seleccionar otra sede'
+      "
+      [attr.title]="collapsed() ? currentWorkspace.restaurant.name : null"
+      (click)="toggleRestaurantSelector()"
+    >
+      <!-- Inicial de la sede -->
+      <span class="app-sidebar__workspace-avatar">
+        {{ currentWorkspace.restaurant.name.charAt(0) || "N" }}
+      </span>
 
-    <span class="app-sidebar__workspace-name">
-      {{ currentWorkspace.restaurant.name }}
-    </span>
+      <!-- Información de la sede -->
+      <div *ngIf="!collapsed()" class="app-sidebar__workspace-info">
+        <span class="app-sidebar__workspace-label"> NEGOCIO ACTIVO </span>
 
-    <span class="app-sidebar__workspace-location">
-      {{ currentWorkspace.restaurant.city }}
-    </span>
+        <span class="app-sidebar__workspace-name">
+          {{ currentWorkspace.restaurant.name }}
+        </span>
+
+        <span class="app-sidebar__workspace-location">
+          {{ currentWorkspace.restaurant.city }}
+        </span>
+      </div>
+
+      <!-- Indicador desplegable -->
+      <svg
+        *ngIf="!collapsed()"
+        class="app-sidebar__workspace-chevron"
+        [class.app-sidebar__workspace-chevron--open]="restaurantSelectorOpen()"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path
+          d="m7 10 5 5 5-5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </button>
+
+    <!-- Lista de sedes -->
+    <div
+      *ngIf="restaurantSelectorOpen()"
+      class="app-sidebar__restaurant-dropdown"
+      role="listbox"
+      aria-label="Seleccionar sede"
+    >
+      <div class="app-sidebar__restaurant-dropdown-header">
+        <span> SELECCIONAR SEDE </span>
+      </div>
+
+      <button
+        *ngFor="let restaurant of authState.restaurants()"
+        type="button"
+        role="option"
+        class="app-sidebar__restaurant-option"
+        [class.app-sidebar__restaurant-option--active]="
+          restaurant.id === currentWorkspace.restaurant.id
+        "
+        [attr.aria-selected]="restaurant.id === currentWorkspace.restaurant.id"
+        [disabled]="switchingRestaurant()"
+        (click)="onRestaurantChange(restaurant.id)"
+      >
+        <!-- Inicial -->
+        <span class="app-sidebar__restaurant-option-avatar">
+          {{ restaurant.name.charAt(0) || "N" }}
+        </span>
+
+        <!-- Nombre y ciudad -->
+        <span class="app-sidebar__restaurant-option-info">
+          <span class="app-sidebar__restaurant-option-name">
+            {{ restaurant.name }}
+          </span>
+
+          <span class="app-sidebar__restaurant-option-city">
+            {{ restaurant.city || "Ciudad no especificada" }}
+          </span>
+        </span>
+
+        <!-- Sede activa -->
+        <svg
+          *ngIf="restaurant.id === currentWorkspace.restaurant.id"
+          class="app-sidebar__restaurant-option-check"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path
+            d="m5 12 4 4L19 6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+
+      <!-- Estado de cambio -->
+      <div
+        *ngIf="switchingRestaurant()"
+        class="app-sidebar__restaurant-loading"
+        aria-live="polite"
+      >
+        Cambiando de sede...
+      </div>
+    </div>
   </div>
 
-  <nav
-    class="app-sidebar__navigation"
-    aria-label="Navegación principal"
-  >
-    <span class="app-sidebar__section-label">
-      PRINCIPAL
+  <!-- Navegación -->
+  <nav class="app-sidebar__navigation" aria-label="Navegación principal">
+    <span *ngIf="!collapsed()" class="app-sidebar__section-label">
+      MENÚ PRINCIPAL
     </span>
 
     <a
       *ngFor="let item of visibleItems()"
       [routerLink]="item.route"
       routerLinkActive="app-sidebar__link--active"
-      [routerLinkActiveOptions]="{ exact: true }"
+      [routerLinkActiveOptions]="{ exact: false }"
       class="app-sidebar__link"
       [attr.aria-label]="item.label"
-      [title]="collapsed() ? item.label : null"
+      [attr.title]="collapsed() ? item.label : null"
       (click)="onNavigate()"
     >
-      <span
-        class="app-sidebar__link-icon"
-        aria-hidden="true"
-      >
+      <span class="app-sidebar__link-icon" aria-hidden="true">
         <ng-container [ngSwitch]="item.icon">
+          <!-- Dashboard -->
           <svg
             *ngSwitchCase="'grid'"
             viewBox="0 0 24 24"
@@ -67,12 +190,13 @@
             stroke="currentColor"
             stroke-width="1.8"
           >
-            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
           </svg>
 
+          <!-- Promociones -->
           <svg
             *ngSwitchCase="'tag'"
             viewBox="0 0 24 24"
@@ -80,10 +204,11 @@
             stroke="currentColor"
             stroke-width="1.8"
           >
-            <path d="M20 13 13 20 3 10V3h7l10 10Z"/>
-            <circle cx="7.5" cy="7.5" r="1"/>
+            <path d="M20 13 13 20 3 10V3h7l10 10Z" />
+            <circle cx="7.5" cy="7.5" r="1" />
           </svg>
 
+          <!-- Canjes -->
           <svg
             *ngSwitchCase="'ticket'"
             viewBox="0 0 24 24"
@@ -91,10 +216,11 @@
             stroke="currentColor"
             stroke-width="1.8"
           >
-            <path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V6Z"/>
-            <path d="M13 7v2m0 3v2m0 3v1"/>
+            <path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V6Z" />
+            <path d="M13 7v2m0 3v2m0 3v1" />
           </svg>
 
+          <!-- Clientes -->
           <svg
             *ngSwitchCase="'users'"
             viewBox="0 0 24 24"
@@ -102,11 +228,12 @@
             stroke="currentColor"
             stroke-width="1.8"
           >
-            <circle cx="9" cy="8" r="3"/>
-            <path d="M3 20v-2a6 6 0 0 1 12 0v2"/>
-            <path d="M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4.5V20"/>
+            <circle cx="9" cy="8" r="3" />
+            <path d="M3 20v-2a6 6 0 0 1 12 0v2" />
+            <path d="M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4.5V20" />
           </svg>
 
+          <!-- Analítica -->
           <svg
             *ngSwitchCase="'chart'"
             viewBox="0 0 24 24"
@@ -114,10 +241,11 @@
             stroke="currentColor"
             stroke-width="1.8"
           >
-            <path d="M3 3v18h18"/>
-            <path d="m7 14 4-4 4 3 5-7"/>
+            <path d="M3 3v18h18" />
+            <path d="m7 14 4-4 4 3 5-7" />
           </svg>
 
+          <!-- Equipo -->
           <svg
             *ngSwitchCase="'team'"
             viewBox="0 0 24 24"
@@ -125,12 +253,13 @@
             stroke="currentColor"
             stroke-width="1.8"
           >
-            <circle cx="9" cy="7" r="3"/>
-            <circle cx="17" cy="9" r="2"/>
-            <path d="M3 20v-2a6 6 0 0 1 12 0v2"/>
-            <path d="M16 15a4 4 0 0 1 5 4v1"/>
+            <circle cx="9" cy="7" r="3" />
+            <circle cx="17" cy="9" r="2" />
+            <path d="M3 20v-2a6 6 0 0 1 12 0v2" />
+            <path d="M16 15a4 4 0 0 1 5 4v1" />
           </svg>
 
+          <!-- Configuración -->
           <svg
             *ngSwitchCase="'settings'"
             viewBox="0 0 24 24"
@@ -138,33 +267,94 @@
             stroke="currentColor"
             stroke-width="1.8"
           >
-            <circle cx="12" cy="12" r="3"/>
-            <path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.6-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.6a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.6 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z" transform="translate(-1 -1)"/>
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.6-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.6a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.6 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z"
+              transform="translate(-1 -1)"
+            />
           </svg>
         </ng-container>
       </span>
 
-      <span
-        *ngIf="!collapsed()"
-        class="app-sidebar__link-label"
-      >
+      <span *ngIf="!collapsed()" class="app-sidebar__link-label">
         {{ item.label }}
       </span>
     </a>
 
-    <p
-      *ngIf="visibleItems().length === 0"
-      class="app-sidebar__empty"
-    >
+    <p *ngIf="visibleItems().length === 0" class="app-sidebar__empty">
       No hay opciones disponibles para tu rol.
     </p>
   </nav>
 
-  <div class="app-sidebar__footer">
-    <span class="app-sidebar__footer-indicator"></span>
+  <!-- Zona inferior -->
+  <footer class="app-sidebar__footer">
+    <!-- Tarjeta promocional -->
+    <section *ngIf="!collapsed()" class="app-sidebar__promo">
+      <span class="app-sidebar__promo-badge"> PROMOAPP </span>
 
-    <span *ngIf="!collapsed()">
-      Espacio de trabajo activo
-    </span>
-  </div>
+      <h3>Haz crecer tu negocio</h3>
+
+      <p>Fideliza a tus clientes con promociones y beneficios exclusivos.</p>
+
+      <a
+        routerLink="/app/promotions"
+        class="app-sidebar__promo-link"
+        (click)="onNavigate()"
+      >
+        Gestionar promociones
+
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M5 12h14" />
+          <path d="m12 5 7 7-7 7" />
+        </svg>
+      </a>
+    </section>
+
+    <!-- Estado -->
+    <div *ngIf="!collapsed()" class="app-sidebar__footer-status">
+      <span class="app-sidebar__footer-indicator"></span>
+      <span>Espacio de trabajo activo</span>
+    </div>
+
+    <!-- Cerrar sesión -->
+    <button
+      type="button"
+      class="app-sidebar__logout"
+      [class.app-sidebar__logout--collapsed]="collapsed()"
+      [disabled]="loggingOut()"
+      [attr.aria-label]="loggingOut() ? 'Cerrando sesión' : 'Cerrar sesión'"
+      [attr.title]="collapsed() ? 'Cerrar sesión' : null"
+      (click)="logout()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+      >
+        <path
+          d="M10 17l5-5-5-5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path d="M15 12H3" stroke-linecap="round" />
+        <path
+          d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+
+      <span *ngIf="!collapsed()">
+        {{ loggingOut() ? "Cerrando sesión..." : "Cerrar sesión" }}
+      </span>
+    </button>
+  </footer>
 </aside>

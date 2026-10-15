@@ -49,6 +49,13 @@ export interface WompiAcceptanceTokens {
   personalDataAuthPermalink: string;
 }
 
+export interface PaymentAuthorizationResponse {
+  data: {
+    authorizationToken: string;
+    expiresInSeconds: number;
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -57,11 +64,27 @@ export class PaymentsService {
     private readonly api: ApiService,
   ) {}
 
-  getAcceptanceTokens(): Observable<{
-    data: WompiAcceptanceTokens;
-  }> {
-    return this.api.get(
-      'payments/wompi/acceptance-tokens',
+  getAcceptanceTokens(): Observable<WompiAcceptanceTokens> {
+  return this.api.get<WompiAcceptanceTokens>(
+    'payments/wompi/acceptance-tokens',
+  );
+}
+
+  /**
+   * Solicita al backend una autorización temporal
+   * para pagar una suscripción.
+   *
+   * El backend verifica la identidad del usuario,
+   * su rol OWNER y la pertenencia a la organización.
+   */
+  authorizePayment(
+    subscriptionId: string,
+  ): Observable<PaymentAuthorizationResponse> {
+    return this.api.post(
+      'payments/wompi/authorization',
+      {
+        subscriptionId,
+      },
     );
   }
 

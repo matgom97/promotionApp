@@ -1,102 +1,563 @@
 <header class="app-header">
-  <div class="app-header__left">
-    <button
-      type="button"
-      class="app-header__menu-button"
-      aria-label="Abrir o cerrar navegación"
-      (click)="onToggleSidebar()"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        aria-hidden="true"
-      >
-        <path d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
-    </button>
-
-    <div class="app-header__location">
-      <label
-        for="restaurant-selector"
-        class="app-header__location-label"
-      >
-        Sede activa
-      </label>
-
-      <select
-        id="restaurant-selector"
-        class="app-header__restaurant-select"
-        [ngModel]="authState.activeRestaurantId()"
-        [disabled]="switchingRestaurant() || loggingOut()"
-        (ngModelChange)="onRestaurantChange($event)"
-      >
-        <option
-          *ngFor="let restaurant of authState.restaurants()"
-          [value]="restaurant.id"
-        >
-          {{ restaurant.name }}
-
-          <ng-container *ngIf="restaurant.city">
-            — {{ restaurant.city }}
-          </ng-container>
-        </option>
-      </select>
-    </div>
-  </div>
 
   <div class="app-header__right">
-    <div class="app-header__user">
-      <span class="app-header__user-name">
-        {{ workspaceState.user()?.firstName }}
-      </span>
 
-      <span class="app-header__user-role">
-        {{ workspaceState.workspace()?.role?.name }}
-      </span>
-    </div>
+    <!-- =====================================================
+         MEMBRESÍA
+         ===================================================== -->
 
     <div
-      class="app-header__avatar"
-      aria-hidden="true"
+      *ngIf="isOwner() && workspaceState.workspace() as workspace"
+      class="app-header__action-wrapper app-header__membership-wrapper"
     >
-      {{ workspaceState.user()?.firstName?.charAt(0) || 'U' }}
+
+      <button
+        type="button"
+        class="app-header__membership"
+        [ngClass]="planVisualClass()"
+        [class.app-header__membership--warning]="
+          membershipStatus().variant === 'warning'
+        "
+        [class.app-header__membership--danger]="
+          membershipStatus().variant === 'danger'
+        "
+        [disabled]="!workspace.plan"
+        [attr.aria-label]="membershipAriaLabel()"
+        [attr.title]="membershipAriaLabel()"
+        [attr.aria-expanded]="membershipMenuOpen()"
+        aria-controls="membership-popover"
+        (click)="toggleMembershipMenu()"
+      >
+
+        <!-- Icono Starter -->
+        <span class="app-header__membership-icon">
+
+          <svg
+            *ngIf="planType() === 'STARTER'"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            aria-hidden="true"
+          >
+            <path
+              d="M20 4C11 4 5 8 5 15c0 2 1 3 3 3 7 0 11-6 12-14Z"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M4 21c2-5 6-9 11-12"
+              stroke-linecap="round"
+            />
+          </svg>
+
+          <!-- Icono Pro -->
+          <svg
+            *ngIf="planType() === 'PRO'"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            aria-hidden="true"
+          >
+            <path
+              d="m3 8 5 4 4-8 4 8 5-4-2 12H5L3 8Z"
+              stroke-linejoin="round"
+            />
+            <path d="M5 17h14" />
+          </svg>
+
+          <!-- Icono Business -->
+          <svg
+            *ngIf="planType() === 'BUSINESS'"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            aria-hidden="true"
+          >
+            <rect
+              x="3"
+              y="7"
+              width="18"
+              height="14"
+              rx="2"
+            />
+            <path
+              d="M8 7V4h8v3M8 12h2m4 0h2M8 16h2m4 0h2"
+            />
+          </svg>
+
+        </span>
+
+        <span class="app-header__membership-info">
+
+          <span class="app-header__membership-name">
+            {{ workspace.plan?.name || 'Membresía' }}
+          </span>
+
+          <span class="app-header__membership-status">
+
+            <span
+              class="app-header__membership-indicator"
+              [class.app-header__membership-indicator--warning]="
+                membershipStatus().variant === 'warning'
+              "
+              [class.app-header__membership-indicator--danger]="
+                membershipStatus().variant === 'danger'
+              "
+            ></span>
+
+            {{ membershipStatus().label }}
+
+          </span>
+
+        </span>
+
+        <svg
+          class="app-header__membership-chevron"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          aria-hidden="true"
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+
+      </button>
+
+      <!-- PANEL DE MEMBRESÍA -->
+
+      <section
+        *ngIf="membershipMenuOpen()"
+        id="membership-popover"
+        class="app-header__popover app-header__membership-popover"
+        aria-label="Detalles de la membresía"
+      >
+
+        <div class="app-header__popover-header">
+
+          <span class="app-header__popover-eyebrow">
+            TU MEMBRESÍA
+          </span>
+
+          <strong>
+            {{ workspace.plan?.name || 'Sin plan disponible' }}
+          </strong>
+
+          <span class="app-header__popover-description">
+            {{ membershipStatus().label }}
+          </span>
+
+        </div>
+
+        <!-- DETALLES DEL PLAN -->
+
+        <div
+          *ngIf="workspace.plan as plan"
+          class="app-header__membership-details"
+        >
+
+          <div class="app-header__membership-detail">
+
+            <span>Precio</span>
+
+            <strong>
+              {{ formatPlanPrice(plan.priceAmount, plan.currency) }}
+            </strong>
+
+          </div>
+
+          <div class="app-header__membership-detail">
+
+            <span>Periodicidad</span>
+
+            <strong>
+              {{ billingIntervalLabel(plan.billingInterval) }}
+            </strong>
+
+          </div>
+
+          <div class="app-header__membership-detail">
+
+            <span>Restaurantes permitidos</span>
+
+            <strong>
+              {{ plan.limits.maxRestaurants }}
+            </strong>
+
+          </div>
+
+          <div class="app-header__membership-detail">
+
+            <span>Usuarios permitidos</span>
+
+            <strong>
+              {{ plan.limits.maxUsers }}
+            </strong>
+
+          </div>
+
+        </div>
+
+        <!-- VIGENCIA -->
+
+        <div
+          *ngIf="membershipPeriod() as period"
+          class="app-header__membership-period"
+          [class.app-header__membership-period--warning]="
+            period.variant === 'warning'
+          "
+          [class.app-header__membership-period--danger]="
+            period.variant === 'danger'
+          "
+        >
+
+          <div class="app-header__membership-period-icon">
+
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path
+                d="M12 7v5l3 2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+
+          </div>
+
+          <div class="app-header__membership-period-info">
+
+            <span>
+              {{ period.label }}
+            </span>
+
+            <strong>
+              {{ period.date }}
+            </strong>
+
+            <small
+              *ngIf="period.daysRemaining !== null"
+            >
+              <ng-container
+                *ngIf="period.daysRemaining > 0; else todayOrPast"
+              >
+                {{ period.daysRemaining }}
+                {{ period.daysRemaining === 1 ? 'día restante' : 'días restantes' }}
+              </ng-container>
+
+              <ng-template #todayOrPast>
+                {{ period.daysRemaining === 0 ? 'Finaliza hoy o el período termina hoy' : '' }}
+              </ng-template>
+            </small>
+
+          </div>
+
+        </div>
+
+        <div class="app-header__popover-footer">
+          La membresía se administra a nivel de organización.
+        </div>
+
+      </section>
+
     </div>
 
-    <button
-      type="button"
-      class="app-header__logout-button"
-      (click)="logout()"
-      [disabled]="loggingOut()"
-      [attr.aria-busy]="loggingOut()"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        aria-hidden="true"
-      >
-        <path
-          d="M10 17l5-5-5-5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M15 12H3"
-          stroke-linecap="round"
-        />
-        <path
-          d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
+    <!-- =====================================================
+         AYUDA
+         ===================================================== -->
 
-      <span>
-        {{ loggingOut() ? 'Cerrando sesión...' : 'Cerrar sesión' }}
-      </span>
-    </button>
+    <div class="app-header__action-wrapper">
+
+      <button
+        type="button"
+        class="app-header__icon-button"
+        aria-label="Abrir menú de ayuda"
+        title="Ayuda"
+        [attr.aria-expanded]="helpMenuOpen()"
+        aria-controls="help-popover"
+        (click)="toggleHelpMenu()"
+      >
+
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" />
+
+          <path
+            d="M9.6 9a2.5 2.5 0 1 1 4.3 1.7c-1.1 1-1.9 1.3-1.9 3"
+            stroke-linecap="round"
+          />
+
+          <path
+            d="M12 17h.01"
+            stroke-linecap="round"
+          />
+        </svg>
+
+      </button>
+
+      <section
+        *ngIf="helpMenuOpen()"
+        id="help-popover"
+        class="app-header__popover app-header__help-popover"
+        aria-label="Opciones de ayuda"
+      >
+
+        <div class="app-header__popover-heading">
+
+          <div>
+            <strong>¿Necesitas ayuda?</strong>
+            <span>Estamos aquí para ayudarte.</span>
+          </div>
+
+          <button
+            type="button"
+            class="app-header__popover-close"
+            aria-label="Cerrar menú de ayuda"
+            (click)="closeMenus()"
+          >
+            &times;
+          </button>
+
+        </div>
+
+        <a
+          *ngFor="let item of helpItems"
+          [routerLink]="item.route"
+          class="app-header__menu-item"
+          (click)="closeMenus()"
+        >
+
+          <span class="app-header__menu-item-icon">
+
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              aria-hidden="true"
+            >
+
+              <ng-container [ngSwitch]="item.icon">
+
+                <ng-container *ngSwitchCase="'book'">
+
+                  <path
+                    d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5v-12Z"
+                  />
+
+                  <path
+                    d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20"
+                  />
+
+                  <path d="M8 7h7M8 10h7" />
+
+                </ng-container>
+
+                <ng-container *ngSwitchCase="'message'">
+
+                  <path
+                    d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"
+                  />
+
+                </ng-container>
+
+              </ng-container>
+
+            </svg>
+
+          </span>
+
+          <span class="app-header__menu-item-info">
+
+            <strong>{{ item.label }}</strong>
+
+            <span>{{ item.description }}</span>
+
+          </span>
+
+          <svg
+            class="app-header__menu-item-arrow"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            aria-hidden="true"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+
+        </a>
+
+        <div class="app-header__help-note">
+          Si necesitas asistencia, contacta al administrador de PromoApp.
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- =====================================================
+         PERFIL DE USUARIO
+         ===================================================== -->
+
+    <div class="app-header__action-wrapper">
+
+      <button
+        type="button"
+        class="app-header__user-trigger"
+        [attr.aria-expanded]="userMenuOpen()"
+        aria-controls="user-popover"
+        aria-label="Abrir menú de usuario"
+        (click)="toggleUserMenu()"
+      >
+
+        <span class="app-header__avatar">
+          {{ userInitials() }}
+        </span>
+
+        <span class="app-header__user">
+
+          <span class="app-header__user-name">
+            {{ workspaceState.user()?.firstName }}
+          </span>
+
+          <span class="app-header__user-role">
+            {{ workspaceState.workspace()?.role?.name }}
+          </span>
+
+        </span>
+
+        <svg
+          class="app-header__user-chevron"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          aria-hidden="true"
+        >
+          <path d="m7 10 5 5 5-5" />
+        </svg>
+
+      </button>
+
+      <!-- MENÚ DEL USUARIO -->
+
+      <section
+        *ngIf="userMenuOpen()"
+        id="user-popover"
+        class="app-header__popover app-header__user-popover"
+        aria-label="Menú de usuario"
+      >
+
+        <div class="app-header__profile-summary">
+
+          <span class="app-header__avatar app-header__avatar--large">
+            {{ userInitials() }}
+          </span>
+
+          <span class="app-header__profile-info">
+
+            <strong>
+              {{ workspaceState.user()?.firstName }}
+            </strong>
+
+            <span>
+              {{ workspaceState.user()?.email }}
+            </span>
+
+            <small>
+              {{ workspaceState.workspace()?.role?.name }}
+            </small>
+
+          </span>
+
+        </div>
+
+        <div class="app-header__menu-divider"></div>
+
+        <button
+          *ngIf="isOwner()"
+          type="button"
+          class="app-header__menu-item app-header__menu-item--button"
+          (click)="toggleMembershipMenu(); closeUserMenu()"
+        >
+
+          <span class="app-header__menu-item-icon">
+
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              aria-hidden="true"
+            >
+              <path d="M4 5h16v14H4z" />
+              <path d="M8 9h8M8 13h5" />
+            </svg>
+
+          </span>
+
+          <span class="app-header__menu-item-info">
+
+            <strong>Membresía</strong>
+
+            <span>Consulta el estado de tu plan</span>
+
+          </span>
+
+        </button>
+
+        <div class="app-header__menu-divider"></div>
+
+        <button
+          type="button"
+          class="app-header__menu-item app-header__menu-item--button app-header__menu-item--danger"
+          [disabled]="loggingOut()"
+          (click)="logout()"
+        >
+
+          <span class="app-header__menu-item-icon">
+
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              aria-hidden="true"
+            >
+              <path d="M10 17l5-5-5-5" />
+              <path d="M15 12H3" />
+              <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" />
+            </svg>
+
+          </span>
+
+          <span class="app-header__menu-item-info">
+
+            <strong>
+              {{ loggingOut() ? 'Cerrando sesión...' : 'Cerrar sesión' }}
+            </strong>
+
+          </span>
+
+        </button>
+
+      </section>
+
+    </div>
+
   </div>
+
 </header>

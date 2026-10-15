@@ -6,10 +6,10 @@ import {
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Router, RouterOutlet } from '@angular/router';
 
 import { WorkspaceStateService } from '../../core/services/workspace/workspace-state.service';
-
 
 import { AppHeaderComponent } from '../../shared/components/header/header.component';
 import { AppSidebarComponent } from '../../shared/components/sidebar/sidebar.component';
@@ -29,6 +29,8 @@ import { AppSidebarComponent } from '../../shared/components/sidebar/sidebar.com
 export class AppLayoutComponent implements OnInit {
   readonly workspaceState = inject(WorkspaceStateService);
 
+  private readonly router = inject(Router);
+
   readonly sidebarCollapsed = signal(false);
   readonly mobileMenuOpen = signal(false);
 
@@ -46,6 +48,14 @@ export class AppLayoutComponent implements OnInit {
             'Error cargando el workspace:',
             error,
           );
+
+          if (this.isSubscriptionAccessDenied(error)) {
+            this.workspaceState.clear();
+
+            void this.router.navigate(
+              ['/auth/subscription'],
+            );
+          }
         },
       });
     } catch (error: unknown) {
@@ -56,15 +66,58 @@ export class AppLayoutComponent implements OnInit {
     }
   }
 
+  /**
+   * Identifica exclusivamente el error de suscripción
+   * que devuelve el backend.
+   */
+  private isSubscriptionAccessDenied(
+    error: unknown,
+  ): boolean {
+    if (!(error instanceof HttpErrorResponse)) {
+      return false;
+    }
+
+    if (error.status !== 403) {
+      return false;
+    }
+
+    const message = error.error?.message;
+
+    const messages = Array.isArray(message)
+      ? message.join(' ')
+      : String(message ?? '');
+
+    return (
+      messages.includes(
+        'An active and valid subscription is required to access this workspace.',
+      ) ||
+      messages.includes('SUBSCRIPTION_ACCESS_DENIED') ||
+      messages.includes('SUBSCRIPTION_REQUIRED')
+    );
+  }
+
   toggleSidebar(): void {
-    this.sidebarCollapsed.update((collapsed) => !collapsed);
+    this.sidebarCollapsed.update(
+      (collapsed) => !collapsed,
+    );
   }
 
   toggleMobileMenu(): void {
-    this.mobileMenuOpen.update((open) => !open);
+    this.mobileMenuOpen.update(
+      (open) => !open,
+    );
   }
 
   closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
+  }
+
+  onHeaderMenuToggle(): void {
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      this.toggleMobileMenu();
+      return;
+    }
+
+    this.toggleSidebar();
   }
 }
