@@ -41,12 +41,15 @@ import { WompiTokenizationService } from '../../../../core/services/wompi/wompi-
 
 import { Subscription } from '../../../../core/models/subscription.model';
 
+import { IconComponent } from '../../../../shared/icon/icon.component';
+
 @Component({
   selector: 'app-subscription',
   standalone: true,
   imports: [
     FormsModule,
     RouterLink,
+    IconComponent,
   ],
   templateUrl: './subscription.component.html',
   styleUrl: './subscription.component.scss',
@@ -1132,37 +1135,20 @@ export class SubscriptionComponent
   // FORMATTERS
   // ==========================================
 
-  get formattedPrice(): string {
-
-    if (
-      !this.subscription?.plan?.priceAmount
-    ) {
-
-      return '$0';
-
-    }
+  get formattedAmount(): string {
 
     const amount =
       Number(
         this.subscription
-          .plan
-          .priceAmount,
+          ?.plan
+          ?.priceAmount ??
+          0,
       );
 
     return new Intl.NumberFormat(
       'es-CO',
       {
-        style:
-          'currency',
-
-        currency:
-          this.subscription
-            .plan
-            .currency ||
-          'COP',
-
-        maximumFractionDigits:
-          0,
+        maximumFractionDigits: 0,
       },
     ).format(
       amount,

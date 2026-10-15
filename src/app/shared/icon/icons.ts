@@ -36,6 +36,14 @@ export const ICONS = {
   add: 'add',
   remove: 'remove',
 
+  /* Pago y confianza */
+  lock: 'lock',
+  encrypted: 'encrypted',
+  bolt: 'bolt',
+  verified_user: 'verified_user',
+  credit_card: 'credit_card',
+  support_agent: 'support_agent',
+
   /* Marca */
   auto_awesome: 'auto_awesome'
 

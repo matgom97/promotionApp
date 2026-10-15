@@ -1,284 +1,315 @@
 <div class="subscription-page">
   @if (isLoading) {
-    <div class="subscription-page__loading">
-      <div class="subscription-page__loading-spinner"></div>
+  <div class="subscription-page__loading">
+    <div class="subscription-page__loading-spinner"></div>
 
-      <p>Cargando información de tu suscripción...</p>
-    </div>
+    <p>Cargando información de tu suscripción...</p>
+  </div>
   } @else if (isPaymentReturn) {
-    <!-- ===================================== -->
-    <!-- PAYMENT PROCESSING                    -->
-    <!-- ===================================== -->
+  <!-- ===================================== -->
+  <!-- PAYMENT PROCESSING                    -->
+  <!-- ===================================== -->
 
-    <div class="payment-processing">
-      <div class="payment-processing__card">
-        @if (paymentStatus === "PENDING") {
-          <div
-            class="payment-processing__icon payment-processing__icon--loading"
-          >
-            <span class="payment-processing__spinner"></span>
-          </div>
-
-          <h1 class="payment-processing__title">Procesando tu pago</h1>
-
-          <p class="payment-processing__message">
-            Estamos verificando tu pago con Wompi.
-          </p>
-
-          <p class="payment-processing__secondary">
-            No cierres esta ventana. Este proceso puede tardar unos segundos.
-          </p>
-
-          <div class="payment-processing__status">
-            <span class="payment-processing__status-dot"></span>
-
-            <span> Esperando confirmación del pago... </span>
-          </div>
-        }
-
-        @if (paymentStatus === "APPROVED") {
-          <div
-            class="payment-processing__icon payment-processing__icon--success"
-          >
-            ✓
-          </div>
-
-          <h1 class="payment-processing__title">¡Pago aprobado!</h1>
-
-          <p class="payment-processing__message">
-            Tu suscripción ha sido activada correctamente.
-          </p>
-
-          <p class="payment-processing__secondary">
-            Estamos preparando tu cuenta...
-          </p>
-        }
-
-        @if (paymentStatus === "DECLINED") {
-          <div class="payment-processing__icon payment-processing__icon--error">
-            !
-          </div>
-
-          <h1 class="payment-processing__title">Pago no aprobado</h1>
-
-          <p class="payment-processing__message">
-            No pudimos confirmar tu pago.
-          </p>
-
-          @if (errorMessage) {
-            <p class="payment-processing__secondary">
-              {{ errorMessage }}
-            </p>
-          }
-
-          <button
-            type="button"
-            class="payment-processing__button"
-            routerLink="/auth/subscription"
-          >
-            Intentar nuevamente
-          </button>
-        }
-
-        @if (paymentStatus === "ERROR") {
-          <div class="payment-processing__icon payment-processing__icon--error">
-            !
-          </div>
-
-          <h1 class="payment-processing__title">Ocurrió un problema</h1>
-
-          <p class="payment-processing__message">
-            No fue posible verificar el estado del pago.
-          </p>
-
-          @if (errorMessage) {
-            <p class="payment-processing__secondary">
-              {{ errorMessage }}
-            </p>
-          }
-        }
+  <div class="payment-processing">
+    <div class="payment-processing__card">
+      @if (paymentStatus === "PENDING") {
+      <div class="payment-processing__icon payment-processing__icon--loading">
+        <span class="payment-processing__spinner"></span>
       </div>
+
+      <h1 class="payment-processing__title">Procesando tu pago</h1>
+
+      <p class="payment-processing__message">
+        Estamos verificando tu pago con Wompi.
+      </p>
+
+      <p class="payment-processing__secondary">
+        No cierres esta ventana. Este proceso puede tardar unos segundos.
+      </p>
+
+      <div class="payment-processing__status">
+        <span class="payment-processing__status-dot"></span>
+
+        <span> Esperando confirmación del pago... </span>
+      </div>
+      }
+
+      @if (paymentStatus === "APPROVED") {
+      <div class="payment-processing__icon payment-processing__icon--success">
+        ✓
+      </div>
+
+      <h1 class="payment-processing__title">¡Pago aprobado!</h1>
+
+      <p class="payment-processing__message">
+        Tu suscripción ha sido activada correctamente.
+      </p>
+
+      <p class="payment-processing__secondary">
+        Estamos preparando tu cuenta...
+      </p>
+      }
+
+      @if (paymentStatus === "DECLINED") {
+      <div class="payment-processing__icon payment-processing__icon--error">
+        !
+      </div>
+
+      <h1 class="payment-processing__title">Pago no aprobado</h1>
+
+      <p class="payment-processing__message">
+        No pudimos confirmar tu pago.
+      </p>
+
+      @if (errorMessage) {
+      <p class="payment-processing__secondary">
+        {{ errorMessage }}
+      </p>
+      }
+
+      <button type="button" class="payment-processing__button" routerLink="/auth/subscription">
+        Intentar nuevamente
+      </button>
+      }
+
+      @if (paymentStatus === "ERROR") {
+      <div class="payment-processing__icon payment-processing__icon--error">
+        !
+      </div>
+
+      <h1 class="payment-processing__title">Ocurrió un problema</h1>
+
+      <p class="payment-processing__message">
+        No fue posible verificar el estado del pago.
+      </p>
+
+      @if (errorMessage) {
+      <p class="payment-processing__secondary">
+        {{ errorMessage }}
+      </p>
+      }
+      }
     </div>
+  </div>
   } @else {
-    <!-- ===================================== -->
-    <!-- NORMAL SUBSCRIPTION PAGE              -->
-    <!-- ===================================== -->
+  <!-- ===================================== -->
+  <!-- NORMAL SUBSCRIPTION PAGE              -->
+  <!-- ===================================== -->
 
-    <div class="subscription-page__content">
-      <header class="subscription-page__header">
-        <div class="subscription-page__brand">
-          <span class="subscription-page__brand-icon"> ◆ </span>
+  <div class="subscription-page__content">
+    <header class="subscription-page__header">
+      <div class="subscription-page__brand">
+        <span class="subscription-page__brand-icon"> ◆ </span>
 
-          <span> PromoApp </span>
+        <span> PromoApp </span>
+      </div>
+
+      <div class="subscription-page__step">
+        <span> Paso 2 de 2 </span>
+
+        <strong> Activar suscripción </strong>
+      </div>
+    </header>
+
+    <main class="subscription-layout">
+      <!-- ================================= -->
+      <!-- PAYMENT FORM                       -->
+      <!-- ================================= -->
+
+      <section class="payment-form">
+        <div class="payment-form__header">
+          <h1>Activa tu suscripción</h1>
+
+          <p>
+            Completa el pago de forma segura para comenzar a utilizar
+            PromoApp.
+          </p>
         </div>
 
-        <div class="subscription-page__step">
-          <span> Paso 2 de 2 </span>
+        <div class="payment-card">
+          <div class="payment-card__header">
+            <div>
+              <h2 class="payment-card__title">Información de pago</h2>
 
-          <strong> Activar suscripción </strong>
-        </div>
-      </header>
+              <p>Pago procesado de forma segura por Wompi.</p>
+            </div>
 
-      <main class="subscription-layout">
-        <!-- ================================= -->
-        <!-- PAYMENT FORM                       -->
-        <!-- ================================= -->
+          <div class="payment-card__secure">
+            <app-icon name="lock" [size]="14" [weight]="600" />
 
-        <section class="payment-form">
-          <div class="payment-form__header">
-            <h1>Activa tu suscripción</h1>
-
-            <p>
-              Completa el pago de forma segura para comenzar a utilizar
-              PromoApp.
-            </p>
+            Pago seguro
+          </div>
           </div>
 
-          <div class="payment-card">
-            <div class="payment-card__header">
-              <div>
-                <h2 class="payment-card__title">Información de pago</h2>
+          <div class="wompi-payment">
+            <div class="wompi-payment__header">
+              <span class="wompi-payment__icon">
+                <app-icon name="credit_card" [size]="22" />
+              </span>
 
-                <p>Pago procesado de forma segura por Wompi.</p>
-              </div>
+              <div class="wompi-payment__text">
+                <strong>Pago con tarjeta</strong>
 
-              <div class="payment-card__secure">🔒 Pago seguro</div>
-            </div>
-
-            <div class="wompi-payment">
-              <div class="wompi-payment__header">
-                <span> 💳 </span>
-
-                <div>
-                  <strong> Pago con tarjeta </strong>
-
-                  <small>
-                    Tus datos son procesados directamente por Wompi.
-                  </small>
-                </div>
-              </div>
-
-              <div class="wompi-payment__widget">
-                <form
-                  #wompiForm
-                  method="POST"
-                  action="http://localhost:3000/api/v1/payments/wompi/token"
-                  (submit)="onWompiSubmit($event)"
-                ></form>
+                <small>
+                  Tus datos son procesados directamente por Wompi.
+                </small>
               </div>
             </div>
 
-            <div class="payment-security">
-              <span> 🔒 </span>
+            <div class="wompi-payment__widget">
+              <form #wompiForm method="POST" action="http://localhost:3000/api/v1/payments/wompi/token"
+                (submit)="onWompiSubmit($event)"></form>
+            </div>
+          </div>
+
+          <div class="payment-security">
+            <span class="payment-security__icon">
+              <app-icon name="lock" [size]="19" [weight]="600" />
+            </span>
+
+            <div class="payment-security__content">
+              <strong>
+                Tus datos de tarjeta nunca tocan nuestros servidores
+              </strong>
 
               <p>
-                PromoApp no almacena los datos de tu tarjeta. El procesamiento
-                se realiza de forma segura mediante Wompi.
+                PromoApp no almacena la información de tu tarjeta. El
+                cifrado y el procesamiento se realizan directamente en
+                el checkout de Wompi.
               </p>
             </div>
+          </div>
 
-            <div class="payment-trust">
-              <div class="payment-trust__item">
-                <span> ✓ </span>
+          <ul class="payment-trust">
+            <li class="payment-trust__item">
+              <span class="payment-trust__icon">
+                <app-icon name="verified_user" [size]="20" />
+              </span>
 
-                <span> Pago seguro </span>
-              </div>
+              <span class="payment-trust__text">
+                <strong>Pago seguro</strong>
 
-              <div class="payment-trust__item">
-                <span> ✓ </span>
+                <small>Checkout por Wompi</small>
+              </span>
+            </li>
 
-                <span> Datos protegidos </span>
-              </div>
+            <li class="payment-trust__item">
+              <span class="payment-trust__icon">
+                <app-icon name="encrypted" [size]="20" />
+              </span>
 
-              <div class="payment-trust__item">
-                <span> ✓ </span>
+              <span class="payment-trust__text">
+                <strong>Datos protegidos</strong>
 
-                <span> Activación inmediata </span>
-              </div>
+                <small>Cifrado de extremo a extremo</small>
+              </span>
+            </li>
+
+            <li class="payment-trust__item">
+              <span class="payment-trust__icon">
+                <app-icon name="bolt" [size]="20" [fill]="1" />
+              </span>
+
+              <span class="payment-trust__text">
+                <strong>Activación inmediata</strong>
+
+                <small>Acceso tras confirmar</small>
+              </span>
+            </li>
+          </ul>
+
+
+          @if (errorMessage) {
+          <div class="payment-form__error">
+            {{ errorMessage }}
+          </div>
+          }
+        </div>
+      </section>
+
+      <!-- ================================= -->
+      <!-- SUBSCRIPTION SUMMARY               -->
+      <!-- ================================= -->
+
+      <aside class="subscription-summary">
+        <div class="plan-summary plan-summary--featured">
+          <div class="plan-summary__badge">Tu plan</div>
+
+          <div class="plan-summary__header">
+            <div>
+              <h2>
+                {{ planName }}
+              </h2>
+
+              <p>Suscripción</p>
             </div>
+          </div>
 
+          <div class="plan-summary__price">
+            <span class="plan-summary__currency">$</span>
 
-            @if (errorMessage) {
-              <div class="payment-form__error">
-                {{ errorMessage }}
-              </div>
+            <span class="plan-summary__amount">
+              {{ formattedAmount }}
+            </span>
+
+            <span class="plan-summary__period">
+              / {{ billingInterval }}
+            </span>
+          </div>
+
+          <div class="plan-summary__divider"></div>
+
+          <div class="plan-summary__features-header">
+            <strong> Incluye: </strong>
+          </div>
+
+          <ul class="plan-summary__features">
+            @for (
+            feature of subscription?.plan?.features ?? [];
+            track feature.code
+            ) {
+            <li>
+              <span class="plan-summary__feature-icon">
+                <app-icon name="check" [size]="14" [weight]="700" />
+              </span>
+
+              <span>
+                {{ feature.name }}
+              </span>
+            </li>
             }
-          </div>
-        </section>
+          </ul>
 
-        <!-- ================================= -->
-        <!-- SUBSCRIPTION SUMMARY               -->
-        <!-- ================================= -->
+          <div class="subscription-summary__activation">
+            <span class="subscription-summary__activation-icon">
+              <app-icon name="check" [size]="21" [fill]="1" />
+            </span>
 
-        <aside class="subscription-summary">
-          <div class="plan-summary plan-summary--featured">
-            <div class="plan-summary__badge">Tu plan</div>
+            <div class="subscription-summary__activation-text">
+              <strong>Activación inmediata</strong>
 
-            <div class="plan-summary__header">
-              <div>
-                <h2>
-                  {{ planName }}
-                </h2>
-
-                <p>Suscripción</p>
-              </div>
-            </div>
-
-            <div class="plan-summary__price">
-              <span class="plan-summary__currency"> $ </span>
-
-              <span class="plan-summary__amount">
-                {{ formattedPrice }}
-              </span>
-
-              <span class="plan-summary__period">
-                / {{ billingInterval }}
-              </span>
-            </div>
-
-            <div class="plan-summary__divider"></div>
-
-            <div class="plan-summary__features-header">
-              <strong> Incluye: </strong>
-            </div>
-
-            <ul class="plan-summary__features">
-              @for (
-                feature of subscription?.plan?.features ?? [];
-                track feature.code
-              ) {
-                <li>
-                  <span class="plan-summary__feature-icon"> ✓ </span>
-
-                  <span>
-                    {{ feature.name }}
-                  </span>
-                </li>
-              }
-            </ul>
-
-            <div class="subscription-summary__activation">
-              <span class="subscription-summary__activation-icon"> ✓ </span>
-
-              <div>
-                <strong> Activación inmediata </strong>
-
-                <p>Una vez confirmado el pago, podrás acceder a tu cuenta.</p>
-              </div>
-            </div>
-
-            <div class="subscription-summary__support">
-              <span class="subscription-summary__support-icon"> ? </span>
-
-              <div>
-                <strong> ¿Necesitas ayuda? </strong>
-
-                <p>Nuestro equipo está disponible para ayudarte.</p>
-              </div>
+              <p>
+                Una vez confirmado el pago, podrás acceder a tu cuenta.
+              </p>
             </div>
           </div>
-        </aside>
-      </main>
-    </div>
+
+          <div class="subscription-summary__support">
+            <span class="subscription-summary__support-icon">
+              <app-icon name="support_agent" [size]="20" />
+            </span>
+
+            <div class="subscription-summary__support-text">
+              <strong>¿Necesitas ayuda?</strong>
+
+              <p>
+                Nuestro equipo está disponible para ayudarte.
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
   }
 </div>
