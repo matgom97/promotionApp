@@ -25,9 +25,17 @@
             Estamos verificando tu pago con Wompi.
           </p>
 
+          <
           <p class="payment-processing__secondary">
-            No cierres esta ventana. Este proceso puede tardar unos segundos.
+            Estamos esperando la confirmación del backend. No realices otro pago
+            mientras verificamos el resultado.
           </p>
+
+          @if (errorMessage) {
+            <p class="payment-processing__secondary">
+              {{ errorMessage }}
+            </p>
+          }
 
           <div class="payment-processing__status">
             <span class="payment-processing__status-dot"></span>
@@ -158,16 +166,15 @@
                 </div>
               </div>
 
-             <div class="wompi-payment__widget">
-  <form
-    #wompiForm
-    method="POST"
-    action="http://localhost:3000/api/v1/payments/wompi/token"
-    target="wompi-payment-response"
-    (submit)="onWompiSubmit($event)"
-  ></form>
-
-</div>
+              <div class="wompi-payment__widget">
+                <form
+                  #wompiForm
+                  method="POST"
+                  action="http://localhost:3000/api/v1/payments/wompi/token"
+                  target="_self"
+                  (submit)="onWompiSubmit($event)"
+                ></form>
+              </div>
             </div>
 
             <div class="payment-security">

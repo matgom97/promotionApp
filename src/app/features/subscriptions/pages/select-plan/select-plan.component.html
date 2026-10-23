@@ -1,0 +1,194 @@
+<section class="plans-page">
+  <div class="plans-container">
+
+    <header class="plans-header">
+      <span class="eyebrow">PROMOAPP · SUSCRIPCIÓN</span>
+
+      <h1>Elige el plan ideal para tu negocio</h1>
+
+      <p>
+        Selecciona el plan que mejor se adapte a tu restaurante
+        y comienza a gestionar tus promociones con PromoApp.
+      </p>
+    </header>
+
+    <div class="notice">
+      <span class="notice-icon" aria-hidden="true">ℹ</span>
+
+      <div>
+        <strong>Selecciona tu plan</strong>
+        <p>
+          Podrás revisar el resumen de tu contratación antes de
+          completar el proceso de pago.
+        </p>
+      </div>
+    </div>
+
+    @if (isLoading) {
+      <div class="state-container" role="status">
+        <span class="loader"></span>
+        <p>Cargando planes disponibles...</p>
+      </div>
+    }
+
+    @if (!isLoading && errorMessage && plans.length === 0) {
+      <div class="error-message" role="alert">
+        <p>{{ errorMessage }}</p>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="loadPlans()">
+          Intentar nuevamente
+        </button>
+      </div>
+    }
+
+    @if (!isLoading && plans.length > 0) {
+      <div class="plans-grid">
+
+        @for (plan of plans; track trackByPlanId($index, plan)) {
+          <article
+            class="plan-card"
+            [class.featured]="plan.isFeatured"
+            [class.selected]="selectedPlanId === plan.id">
+
+            @if (plan.isFeatured) {
+              <span class="featured-badge">
+                Recomendado
+              </span>
+            }
+
+            <div class="plan-header">
+              <h2>{{ plan.name }}</h2>
+
+              <p class="plan-description">
+                {{ plan.description || 'Un plan para impulsar tu negocio.' }}
+              </p>
+            </div>
+
+            <div class="plan-price">
+              <span class="currency">
+                {{ plan.price.currency }}
+              </span>
+
+              <span class="amount">
+                {{ plan.price.amount | currency:plan.price.currency:'symbol':'1.0-0' }}
+              </span>
+
+              <span class="period">
+                / {{ formatBillingInterval(plan.billingInterval) }}
+              </span>
+            </div>
+
+            @if (plan.trialDays > 0) {
+              <p class="trial-label">
+                Incluye {{ plan.trialDays }}
+                {{ plan.trialDays === 1 ? 'día de prueba' : 'días de prueba' }}
+              </p>
+            }
+
+            <div class="plan-divider"></div>
+
+            <h3>¿Qué incluye?</h3>
+
+            <ul class="features-list">
+              @for (feature of plan.features; track feature.code) {
+                <li>
+                  <span class="check-icon" aria-hidden="true">✓</span>
+
+                  <div>
+                    <span>{{ feature.name }}</span>
+
+                    @if (feature.description) {
+                      <small>{{ feature.description }}</small>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+
+            <div class="plan-limits">
+              <div>
+                <span>Usuarios</span>
+                <strong>
+                  {{
+                    plan.limits.maxUsers === null
+                      ? 'Ilimitados'
+                      : plan.limits.maxUsers
+                  }}
+                </strong>
+              </div>
+
+              <div>
+                <span>Promociones activas</span>
+                <strong>
+                  {{
+                    plan.limits.maxActivePromotions === null
+                      ? 'Ilimitadas'
+                      : plan.limits.maxActivePromotions
+                  }}
+                </strong>
+              </div>
+
+              <div>
+                <span>Restaurantes</span>
+                <strong>
+                  {{
+                    plan.limits.maxRestaurants === null
+                      ? 'Ilimitados'
+                      : plan.limits.maxRestaurants
+                  }}
+                </strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="select-button"
+              [class.selected-button]="selectedPlanId === plan.id"
+              [disabled]="isSubmitting"
+              [attr.aria-pressed]="selectedPlanId === plan.id"
+              (click)="selectPlan(plan)">
+
+              @if (selectedPlanId === plan.id) {
+                Plan seleccionado ✓
+              } @else {
+                Elegir este plan
+              }
+            </button>
+
+          </article>
+        }
+
+      </div>
+
+      @if (errorMessage) {
+        <div class="error-message" role="alert">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <footer class="checkout-footer">
+        <div>
+          <strong>¿Listo para continuar?</strong>
+          <p>Selecciona un plan para iniciar la contratación.</p>
+        </div>
+
+        <button
+          type="button"
+          class="continue-button"
+          [disabled]="!selectedPlanId || isSubmitting"
+          (click)="continueToCheckout()">
+
+          @if (isSubmitting) {
+            Preparando contratación...
+          } @else {
+            Continuar al pago →
+          }
+        </button>
+      </footer>
+    }
+
+  </div>
+</section>

@@ -1,0 +1,319 @@
+<section class="team-page">
+  <!-- Encabezado -->
+  <header class="team-page__header">
+    <div>
+      <span class="team-page__eyebrow"> ORGANIZACIÓN </span>
+
+      <h1>Equipo</h1>
+
+      <p>Administra los usuarios y sus accesos a los restaurantes.</p>
+    </div>
+
+    <button
+      *ngIf="canManageTeam()"
+      type="button"
+      class="team-button team-button--primary"
+      (click)="openCreateMember()"
+    >
+      <span aria-hidden="true">+</span>
+      Agregar miembro
+    </button>
+  </header>
+
+  <!-- Estadísticas -->
+  <section class="team-stats">
+    <article class="team-stat">
+      <span>Total de miembros</span>
+      <strong>{{ total() }}</strong>
+    </article>
+
+    <article class="team-stat">
+      <span>Propietarios</span>
+      <strong>{{ ownerCount() }}</strong>
+    </article>
+
+    <article class="team-stat">
+      <span>Administradores</span>
+      <strong>{{ adminCount() }}</strong>
+    </article>
+  </section>
+
+  <!-- Panel principal -->
+  <section class="team-panel">
+    <div class="team-panel__heading">
+      <div>
+        <h2>Miembros de la organización</h2>
+
+        <p>Consulta los usuarios y sus asignaciones.</p>
+      </div>
+
+      <button
+        type="button"
+        class="team-button team-button--secondary"
+        (click)="loadMembers()"
+        [disabled]="loading()"
+      >
+        Actualizar
+      </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="team-filters">
+      <label class="team-field team-field--search">
+        <span>Buscar</span>
+
+        <input
+          type="search"
+          placeholder="Nombre o correo electrónico"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+        />
+      </label>
+
+      <label class="team-field">
+        <span>Rol</span>
+
+        <select
+          [ngModel]="selectedRole()"
+          (ngModelChange)="selectedRole.set($event)"
+        >
+          <option value="">Todos los roles</option>
+
+          <option *ngFor="let role of roles" [value]="role">
+            {{ role }}
+          </option>
+        </select>
+      </label>
+
+      <div class="team-filters__actions">
+        <button
+          type="button"
+          class="team-button team-button--primary"
+          (click)="applyFilters()"
+          [disabled]="loading()"
+        >
+          Filtrar
+        </button>
+
+        <button
+          type="button"
+          class="team-button team-button--secondary"
+          (click)="clearFilters()"
+          [disabled]="loading()"
+        >
+          Limpiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Cargando -->
+    <div *ngIf="loading()" class="team-state" aria-live="polite">
+      <span class="team-spinner" aria-hidden="true"></span>
+
+      <span>Cargando miembros...</span>
+    </div>
+
+    <!-- Error -->
+    <div
+      *ngIf="!loading() && error()"
+      class="team-state team-state--error"
+      role="alert"
+    >
+      <p>{{ error() }}</p>
+
+      <button
+        type="button"
+        class="team-button team-button--secondary"
+        (click)="loadMembers()"
+      >
+        Reintentar
+      </button>
+    </div>
+
+    <!-- Sin resultados -->
+    <div
+      *ngIf="!loading() && !error() && filteredMembers().length === 0"
+      class="team-state"
+    >
+      <div class="team-empty">
+        <span class="team-empty__icon" aria-hidden="true"> 👥 </span>
+
+        <h3>No se encontraron miembros</h3>
+
+        <p>Prueba con otro nombre o selecciona un rol diferente.</p>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div
+      *ngIf="!loading() && !error() && filteredMembers().length > 0"
+      class="team-table-wrapper"
+    >
+      <table class="team-table">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Acceso</th>
+            <th>Estado</th>
+            <th>Fecha de ingreso</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let member of filteredMembers(); trackBy: trackByMember">
+            <!-- Usuario -->
+            <td>
+              <div class="team-user">
+                <span class="team-user__avatar">
+                  {{ getInitial(member.user.firstName) }}
+                </span>
+
+                <div class="team-user__info">
+                  <strong>
+                    {{ member.user.firstName }}
+                  </strong>
+
+                  <span>
+                    {{ member.user.email }}
+                  </span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Rol -->
+            <td>
+              <span
+                class="team-badge"
+                [class.team-badge--owner]="member.role === 'OWNER'"
+                [class.team-badge--admin]="member.role === 'ADMIN'"
+                [class.team-badge--manager]="member.role === 'MANAGER'"
+                [class.team-badge--staff]="member.role === 'STAFF'"
+              >
+                {{ member.roleName }}
+              </span>
+            </td>
+
+            <!-- Restaurantes asignados -->
+            <td>
+              <ng-container
+                *ngIf="member.allRestaurants; else assignedRestaurants"
+              >
+                <span class="team-access team-access--all">
+                  Todos los restaurantes
+                </span>
+              </ng-container>
+
+              <ng-template #assignedRestaurants>
+                <span
+                  *ngIf="member.restaurants.length > 0; else noRestaurants"
+                  class="team-access"
+                >
+                  {{ getRestaurantNames(member) }}
+                </span>
+
+                <ng-template #noRestaurants>
+                  <span class="team-muted"> Sin restaurantes asignados </span>
+                </ng-template>
+              </ng-template>
+            </td>
+
+            <!-- Estado -->
+            <td>
+              <span
+                class="team-status"
+                [class.team-status--active]="member.user.status === 'ACTIVE'"
+                [class.team-status--inactive]="member.user.status !== 'ACTIVE'"
+              >
+                <span class="team-status__dot"></span>
+
+                {{ member.user.status }}
+              </span>
+            </td>
+
+            <!-- Fecha -->
+            <td>
+              {{ member.createdAt | date: "dd/MM/yyyy" }}
+            </td>
+
+            <td>
+              <div class="member-actions" *ngIf="canManageTeam()">
+                <button type="button" (click)="openEditMember(member)">
+                  Editar
+                </button>
+
+                <button
+                  type="button"
+                  *ngIf="member.role !== 'OWNER'"
+                  (click)="openRevokeConfirmation(member)"
+                >
+                  Revocar acceso
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <footer
+      *ngIf="!loading() && !error() && total() > 0"
+      class="team-pagination"
+    >
+      <span class="team-pagination__info">
+        Página {{ page() }} de {{ totalPages() }}
+        <span aria-hidden="true">·</span>
+        {{ total() }} miembros
+      </span>
+
+      <div class="team-pagination__actions">
+        <button
+          type="button"
+          class="team-button team-button--secondary"
+          [disabled]="page() <= 1 || loading()"
+          (click)="previousPage()"
+        >
+          Anterior
+        </button>
+
+        <button
+          type="button"
+          class="team-button team-button--secondary"
+          [disabled]="page() >= totalPages() || loading()"
+          (click)="nextPage()"
+        >
+          Siguiente
+        </button>
+      </div>
+    </footer>
+  </section>
+
+  <app-create-member-modal
+    *ngIf="showCreateMember() && organizationId()"
+    [organizationId]="organizationId()!"
+    (closed)="showCreateMember.set(false)"
+    (created)="loadMembers()"
+  ></app-create-member-modal>
+
+  <app-edit-member-modal
+  *ngIf="
+    showEditMember() &&
+    selectedMember() &&
+    organizationId()
+  "
+  [organizationId]="organizationId()!"
+  [memberId]="selectedMember()!.id"
+  (closed)="closeEditMember()"
+  (saved)="loadMembers()"
+></app-edit-member-modal>
+
+<app-revoke-member-modal
+  *ngIf="showRevokeConfirmation() && selectedMember()"
+  [memberName]="selectedMember()!.user.firstName"
+  [revoking]="revokingMember()"
+  (cancelled)="closeRevokeConfirmation()"
+  (confirmed)="confirmRevokeMember()"
+></app-revoke-member-modal>
+</section>

@@ -1,0 +1,356 @@
+:host {
+  display: contents;
+}
+
+/* =========================================
+   FONDO DEL MODAL
+========================================= */
+
+.revoke-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+
+  display: grid;
+  place-items: center;
+
+  padding: var(--space-5, 1.25rem);
+
+  background: rgb(23 23 47 / 55%);
+  backdrop-filter: blur(5px);
+
+  animation: revoke-backdrop-appear 180ms ease-out;
+}
+
+/* =========================================
+   CONTENEDOR
+========================================= */
+
+.revoke-dialog {
+  width: min(100%, 460px);
+  overflow: hidden;
+
+  color: var(--color-text-primary, #17172f);
+  background: var(--color-background, #fff);
+
+  border: 1px solid var(--color-border-light, #eeeef5);
+  border-radius: var(--radius-xl, 1rem);
+
+  box-shadow: var(--shadow-lg, 0 24px 60px rgb(23 23 47 / 20%));
+
+  animation: revoke-dialog-appear 200ms ease-out;
+}
+
+/* =========================================
+   ENCABEZADO
+========================================= */
+
+.revoke-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  padding: var(--space-6, 1.5rem) var(--space-6, 1.5rem) 0;
+}
+
+.revoke-dialog__icon {
+  display: grid;
+  place-items: center;
+
+  width: 52px;
+  height: 52px;
+
+  color: var(--color-danger, #dc3545);
+  background: #fff1f2;
+
+  border: 1px solid #ffe0e3;
+  border-radius: var(--radius-lg, 0.875rem);
+}
+
+.revoke-dialog__close {
+  display: grid;
+  place-items: center;
+
+  width: 36px;
+  height: 36px;
+
+  color: var(--color-text-secondary, #686983);
+  background: transparent;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 0.375rem);
+
+  cursor: pointer;
+
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.revoke-dialog__close:hover:not(:disabled) {
+  color: var(--color-text-primary, #17172f);
+  background: var(--color-background-soft, #f8f8fc);
+}
+
+.revoke-dialog__close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   CONTENIDO
+========================================= */
+
+.revoke-dialog__body {
+  padding: var(--space-5, 1.25rem) var(--space-6, 1.5rem);
+}
+
+.revoke-dialog__eyebrow {
+  display: block;
+  margin-bottom: var(--space-2, 0.5rem);
+
+  color: var(--color-danger, #dc3545);
+
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.revoke-dialog__body h2 {
+  margin: 0 0 var(--space-3, 0.75rem);
+
+  color: var(--color-text-primary, #17172f);
+
+  font-size: var(--font-size-xl, 1.25rem);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: 1.3;
+}
+
+.revoke-dialog__body > p {
+  margin: 0;
+
+  color: var(--color-text-secondary, #686983);
+
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: 1.7;
+
+  overflow-wrap: anywhere;
+}
+
+.revoke-dialog__body > p strong {
+  color: var(--color-text-primary, #17172f);
+  font-weight: 700;
+}
+
+/* =========================================
+   AVISO
+========================================= */
+
+.revoke-dialog__notice {
+  display: flex;
+  align-items: flex-start;
+
+  gap: var(--space-3, 0.75rem);
+  margin-top: var(--space-5, 1.25rem);
+  padding: var(--space-4, 1rem);
+
+  color: #92400e;
+  background: #fffbeb;
+
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md, 0.625rem);
+}
+
+.revoke-dialog__notice svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.revoke-dialog__notice p {
+  margin: 0;
+
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+/* =========================================
+   BOTONES
+========================================= */
+
+.revoke-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-4, 1rem) var(--space-6, 1.5rem);
+
+  background: var(--color-background-soft, #f8f8fc);
+  border-top: 1px solid var(--color-border-light, #eeeef5);
+}
+
+.revoke-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: var(--space-2, 0.5rem);
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 0.625rem);
+
+  font-family: var(--font-family-base, inherit);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.revoke-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.revoke-button:focus-visible,
+.revoke-dialog__close:focus-visible {
+  outline: 2px solid var(--color-primary-500, #7040e8);
+  outline-offset: 3px;
+}
+
+.revoke-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.revoke-button--secondary {
+  color: var(--color-text-primary, #17172f);
+  background: var(--color-background, #fff);
+
+  border-color: var(--color-border, #e2e2ec);
+}
+
+.revoke-button--secondary:hover:not(:disabled) {
+  background: var(--color-background-soft, #f8f8fc);
+  border-color: var(--color-border, #d1d1e0);
+}
+
+.revoke-button--danger {
+  color: #fff;
+  background: #dc3545;
+
+  border-color: #dc3545;
+  box-shadow: 0 3px 8px rgb(220 53 69 / 15%);
+}
+
+.revoke-button--danger:hover:not(:disabled) {
+  background: #bb2635;
+  border-color: #bb2635;
+  box-shadow: 0 5px 12px rgb(220 53 69 / 20%);
+}
+
+/* =========================================
+   INDICADOR DE CARGA
+========================================= */
+
+.revoke-spinner {
+  width: 16px;
+  height: 16px;
+
+  border: 2px solid rgb(255 255 255 / 40%);
+  border-top-color: #fff;
+  border-radius: 50%;
+
+  animation: revoke-spin 700ms linear infinite;
+}
+
+/* =========================================
+   ANIMACIONES
+========================================= */
+
+@keyframes revoke-backdrop-appear {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes revoke-dialog-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes revoke-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 480px) {
+  .revoke-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .revoke-dialog {
+    width: 100%;
+    max-width: none;
+
+    border-radius: var(--radius-xl, 1rem) var(--radius-xl, 1rem) 0 0;
+
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .revoke-dialog__header {
+    padding: var(--space-5, 1.25rem) var(--space-4, 1rem) 0;
+  }
+
+  .revoke-dialog__body {
+    padding: var(--space-4, 1rem);
+  }
+
+  .revoke-dialog__footer {
+    padding: var(--space-4, 1rem);
+  }
+
+  .revoke-button {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revoke-backdrop,
+  .revoke-dialog,
+  .revoke-spinner,
+  .revoke-button {
+    animation: none;
+    transition: none;
+  }
+
+  .revoke-button:hover:not(:disabled) {
+    transform: none;
+  }
+}

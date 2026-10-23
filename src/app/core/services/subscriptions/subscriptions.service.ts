@@ -4,8 +4,18 @@ import { Observable } from 'rxjs';
 import { ApiService } from '../api/api.service';
 
 import {
-  SubscriptionResponse
+  SubscriptionResponse,
+  SubscriptionStatus
 } from '../../models/subscription.model';
+
+export interface CreateSubscriptionResponse {
+  message: string;
+  data: {
+    id: string;
+    status: SubscriptionStatus;
+    reused: boolean;
+  };
+}
 
 @Injectable({
   providedIn: 'root'
@@ -29,12 +39,22 @@ export class SubscriptionsService {
 
   /**
    * Recupera la suscripción pendiente del usuario autenticado.
-   * El backend debe implementar este endpoint y verificar
-   * la membresía y los permisos del usuario.
    */
   getMyPendingSubscription(): Observable<SubscriptionResponse> {
     return this.api.get<SubscriptionResponse>(
       'subscriptions/me/pending'
+    );
+  }
+
+  /**
+   * Crea o recupera una suscripción pendiente para el plan seleccionado.
+   */
+  createForSelectedPlan(
+    planId: string
+  ): Observable<CreateSubscriptionResponse> {
+    return this.api.post<CreateSubscriptionResponse>(
+      'subscriptions',
+      { planId }
     );
   }
 }

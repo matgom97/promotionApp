@@ -1,0 +1,270 @@
+<div class="modal-backdrop" (click)="close()">
+  <section
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="create-member-title"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="modal__header">
+      <div>
+        <h2 id="create-member-title">Agregar miembro</h2>
+        <p>Registra un usuario y configura sus accesos.</p>
+      </div>
+
+      <button
+        type="button"
+        class="modal__close"
+        aria-label="Cerrar"
+        [disabled]="saving()"
+        (click)="close()"
+      >
+        &times;
+      </button>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="modal__body">
+        <div class="form-field">
+          <label for="firstName">Nombre</label>
+
+          <input
+            id="firstName"
+            type="text"
+            formControlName="firstName"
+            autocomplete="given-name"
+            placeholder="Nombre del usuario"
+          />
+
+          <small
+            *ngIf="
+              form.controls.firstName.touched && form.controls.firstName.invalid
+            "
+          >
+            Introduce un nombre válido de al menos 2 caracteres.
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label for="email">Correo electrónico</label>
+
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="usuario@correo.com"
+          />
+
+          <small
+            *ngIf="form.controls.email.touched && form.controls.email.invalid"
+          >
+            Introduce un correo electrónico válido.
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label for="password">Contraseña inicial</label>
+
+          <div class="password-input">
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="new-password"
+              placeholder="Mínimo 8 caracteres"
+            />
+
+            <button type="button" (click)="togglePasswordVisibility()">
+              {{ showPassword() ? "Ocultar" : "Mostrar" }}
+            </button>
+          </div>
+
+          <small
+            *ngIf="
+              form.controls.password.touched && form.controls.password.invalid
+            "
+          >
+            La contraseña debe tener entre 12 y 128 caracteres.
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label for="confirmPassword">Confirmar contraseña</label>
+
+          <input
+            id="confirmPassword"
+            type="password"
+            formControlName="confirmPassword"
+            autocomplete="new-password"
+            placeholder="Repite la contraseña"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="role">Rol</label>
+
+          <select id="role" formControlName="role">
+            <option value="" disabled>Selecciona un rol</option>
+
+            <option *ngFor="let role of roles()" [value]="role.code">
+              {{ role.name }}
+            </option>
+          </select>
+
+          <small *ngIf="loadingRoles()">Cargando roles...</small>
+
+          <small *ngIf="rolesError()" class="form-error">
+            {{ rolesError() }}
+          </small>
+        </div>
+
+        <!-- Selección de sedes -->
+<div
+  class="form-field restaurant-field"
+  *ngIf="!form.controls.allRestaurants.value"
+>
+  <label class="field-label">
+    Sedes asignadas
+    <span class="required-mark">*</span>
+  </label>
+
+  <p class="field-description">
+    Selecciona las sedes en las que podrá trabajar este miembro.
+  </p>
+
+  <!-- Cargando -->
+  <div
+    *ngIf="loadingRestaurants()"
+    class="restaurant-message"
+    role="status"
+  >
+    <span class="loading-spinner"></span>
+    Cargando sedes...
+  </div>
+
+  <!-- Error -->
+  <div
+    *ngIf="restaurantsError()"
+    class="restaurant-error"
+    role="alert"
+  >
+    {{ restaurantsError() }}
+  </div>
+
+  <!-- Lista vacía -->
+  <div
+    *ngIf="
+      !loadingRestaurants() &&
+      !restaurantsError() &&
+      restaurants().length === 0
+    "
+    class="restaurant-empty"
+  >
+    No hay sedes activas disponibles para esta organización.
+  </div>
+
+  <!-- Sedes disponibles -->
+  <div
+    *ngIf="!loadingRestaurants() && restaurants().length > 0"
+    class="restaurant-list"
+  >
+    <label
+      *ngFor="let restaurant of restaurants()"
+      class="restaurant-option"
+      [class.restaurant-option-selected]="
+        form.controls.restaurantIds.value.includes(restaurant.id)
+      "
+    >
+      <input
+        type="checkbox"
+        [checked]="
+          form.controls.restaurantIds.value.includes(restaurant.id)
+        "
+        (change)="toggleRestaurant(restaurant.id)"
+      />
+
+      <span class="restaurant-option-content">
+        <span class="restaurant-name">
+          {{ restaurant.name }}
+        </span>
+
+        <span class="restaurant-status">
+          Sede activa
+        </span>
+      </span>
+
+      <span
+        class="restaurant-check"
+        aria-hidden="true"
+      >
+        ✓
+      </span>
+    </label>
+  </div>
+
+  <!-- Cantidad seleccionada -->
+  <small
+    *ngIf="form.controls.restaurantIds.value.length > 0"
+    class="restaurant-selection-count"
+  >
+    {{ form.controls.restaurantIds.value.length }}
+    {{ form.controls.restaurantIds.value.length === 1 ? 'sede seleccionada' : 'sedes seleccionadas' }}
+  </small>
+
+  <!-- Validación -->
+  <small
+    *ngIf="
+      form.controls.restaurantIds.touched &&
+      !form.controls.allRestaurants.value &&
+      form.controls.restaurantIds.value.length === 0
+    "
+    class="form-error"
+  >
+    Selecciona al menos una sede.
+  </small>
+</div>
+
+<!-- Acceso a todas las sedes -->
+<label class="all-restaurants-option">
+  <input
+    type="checkbox"
+    formControlName="allRestaurants"
+  />
+
+  <span>
+    <strong>Acceso a todas las sedes</strong>
+
+    <small>
+      El miembro podrá trabajar en todas las sedes de la organización,
+      incluidas las que se creen posteriormente.
+    </small>
+  </span>
+</label>
+
+        <div *ngIf="errorMessage()" class="form-error" role="alert">
+          {{ errorMessage() }}
+        </div>
+      </div>
+
+      <footer class="modal__footer">
+        <button
+          type="button"
+          class="button button--secondary"
+          [disabled]="saving()"
+          (click)="close()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="submit"
+          class="button button--primary"
+          [disabled]="saving()"
+        >
+          {{ saving() ? "Guardando..." : "Crear miembro" }}
+        </button>
+      </footer>
+    </form>
+  </section>
+</div>

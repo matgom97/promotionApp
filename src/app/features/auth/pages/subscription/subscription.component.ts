@@ -61,7 +61,7 @@ export class SubscriptionComponent
 
   private paymentResponseReceived = false;
 
-private paymentResponseTimeoutId?: ReturnType<typeof setTimeout>;
+  private paymentResponseTimeoutId?: ReturnType<typeof setTimeout>;
 
   @ViewChild('wompiForm', { static: false })
   private wompiForm?: ElementRef<HTMLFormElement>;
@@ -125,7 +125,7 @@ private paymentResponseTimeoutId?: ReturnType<typeof setTimeout>;
     private readonly wompiTokenizationService: WompiTokenizationService,
     private readonly router: Router,
     private readonly activatedRoute: ActivatedRoute,
-  ) {}
+  ) { }
 
   // ==========================================
   // INIT
@@ -170,6 +170,23 @@ private paymentResponseTimeoutId?: ReturnType<typeof setTimeout>;
         }
 
         /*
+        * Contratación iniciada desde la selección de planes.
+        * Tiene prioridad sobre una suscripción almacenada
+        * previamente durante el registro.
+        */
+        if (returnedSubscriptionId && payment !== 'processing') {
+          this.subscriptionId = returnedSubscriptionId;
+
+          this.registrationState.setSubscriptionId(
+            returnedSubscriptionId,
+          );
+
+          this.initializePaymentPage();
+
+          return;
+        }
+
+        /*
          * Flujo de registro o recuperación después
          * de iniciar sesión.
          */
@@ -207,8 +224,8 @@ private paymentResponseTimeoutId?: ReturnType<typeof setTimeout>;
     }
 
     if (this.paymentResponseTimeoutId) {
-  clearTimeout(this.paymentResponseTimeoutId);
-}
+      clearTimeout(this.paymentResponseTimeoutId);
+    }
   }
 
   // ==========================================
@@ -241,11 +258,14 @@ private paymentResponseTimeoutId?: ReturnType<typeof setTimeout>;
             return;
           }
 
-          if (response.data.status !== 'PENDING') {
+          if (
+            response.data.status !== 'PENDING' &&
+            response.data.status !== 'EXPIRED'
+          ) {
             this.isLoading = false;
 
             this.errorMessage =
-              'La suscripción no está pendiente de pago.';
+              'La suscripción no está disponible para realizar un pago.';
 
             return;
           }
@@ -622,7 +642,7 @@ private paymentResponseTimeoutId?: ReturnType<typeof setTimeout>;
         this.paymentAuthorizationToken,
       );
 
-      
+
 
       /*
        * Evita duplicar el script del widget.
@@ -763,58 +783,55 @@ private paymentResponseTimeoutId?: ReturnType<typeof setTimeout>;
   // ==========================================
   // WOMPI SUBMIT
   // ==========================================
-onWompiSubmit(event: Event): void {
-  if (!this.canStartPayment()) {
-    event.preventDefault();
+  onWompiSubmit(event: Event): void {
+    if (!this.canStartPayment()) {
+      event.preventDefault();
 
-    this.errorMessage =
-      'Completa las autorizaciones requeridas antes de continuar con el pago.';
+      this.errorMessage =
+        'Completa las autorizaciones requeridas antes de continuar con el pago.';
 
-    return;
+      return;
+    }
+
+    this.errorMessage = '';
+    this.isProcessing = true;
+    this.isWaitingForPayment = true;
+    this.paymentStatus = 'PENDING';
   }
 
-  this.errorMessage = '';
-  this.isProcessing = true;
-  this.isWaitingForPayment = true;
-  this.paymentStatus = 'PENDING';
-}
+  onPaymentResponseLoad(): void {
+    /*
+     * Los navegadores también disparan load al cargar
+     * inicialmente el iframe vacío. No se debe interpretar
+     * ese evento como una respuesta del backend.
+     */
+    if (!this.isProcessing || !this.subscriptionId) {
+      return;
+    }
 
-onPaymentResponseLoad(): void {
-  /*
-   * Los navegadores también disparan load al cargar
-   * inicialmente el iframe vacío. No se debe interpretar
-   * ese evento como una respuesta del backend.
-   */
-  if (!this.isProcessing || !this.subscriptionId) {
-    return;
+    this.paymentResponseReceived = true;
+
+    if (this.paymentResponseTimeoutId) {
+      clearTimeout(this.paymentResponseTimeoutId);
+      this.paymentResponseTimeoutId = undefined;
+    }
+
+    /*
+     * No necesitamos leer el contenido del iframe.
+     * Al ser de otro origen, el navegador impide que Angular
+     * inspeccione directamente su respuesta.
+     *
+     * Consultamos el estado real de la suscripción en el API.
+     */
+    this.startPaymentPolling();
   }
-
-  this.paymentResponseReceived = true;
-
-  if (this.paymentResponseTimeoutId) {
-    clearTimeout(this.paymentResponseTimeoutId);
-    this.paymentResponseTimeoutId = undefined;
-  }
-
-  /*
-   * No necesitamos leer el contenido del iframe.
-   * Al ser de otro origen, el navegador impide que Angular
-   * inspeccione directamente su respuesta.
-   *
-   * Consultamos el estado real de la suscripción en el API.
-   */
-  this.startPaymentPolling();
-}
 
   // ==========================================
   // PAYMENT POLLING
   // ==========================================
 
   private startPaymentPolling(): void {
-    if (
-      !this.subscriptionId ||
-      this.pollingStarted
-    ) {
+    if (!this.subscriptionId || this.pollingStarted) {
       return;
     }
 
@@ -823,62 +840,69 @@ onPaymentResponseLoad(): void {
     this.isWaitingForPayment = true;
     this.isProcessing = true;
     this.paymentStatus = 'PENDING';
+    this.errorMessage = '';
 
-    this.subscriptionsService
-      .getSubscription(this.subscriptionId)
+    interval(2000)
       .pipe(
-        catchError((error: unknown) => {
-          console.error(
-            'Error en consulta inicial del pago:',
-            error,
-          );
+        take(30),
 
-          this.handlePollingError();
-
-          return EMPTY;
-        }),
-
-        switchMap((response) => {
-          this.updateSubscriptionFromPolling(
-            response.data,
-          );
-
-          if (response.data.status === 'ACTIVE') {
-            this.handlePaymentApproved();
-
-            return EMPTY;
+        switchMap(() => {
+          if (!this.subscriptionId) {
+            return throwError(
+              () => new Error('No se encontró la suscripción.'),
+            );
           }
 
-          return interval(2000).pipe(
-            switchMap(() => {
-              if (!this.subscriptionId) {
-                return throwError(
-                  () => new Error(
-                    'No se encontró la suscripción.',
-                  ),
-                );
-              }
+          return this.paymentsService
+            .getLatestSubscriptionPayment(this.subscriptionId)
+            .pipe(
+              switchMap((paymentResponse) => {
+                const payment = paymentResponse.data;
 
-              return this.subscriptionsService.getSubscription(
-                this.subscriptionId,
-              );
-            }),
+                if (!payment) {
+                  return this.subscriptionsService
+                    .getSubscription(this.subscriptionId!);
+                }
 
-            take(30),
+                if (payment.status === 'APPROVED') {
+                  return this.subscriptionsService
+                    .getSubscription(this.subscriptionId!);
+                }
 
-            takeWhile(
-              (pollResponse) =>
-                pollResponse.data.status === 'PENDING',
-              true,
-            ),
-          );
+                if (
+                  payment.status === 'DECLINED' ||
+                  payment.status === 'VOIDED' ||
+                  payment.status === 'ERROR'
+                ) {
+                  this.paymentStatus =
+                    payment.status === 'DECLINED'
+                      ? 'DECLINED'
+                      : 'ERROR';
+
+                  this.isWaitingForPayment = false;
+                  this.isProcessing = false;
+
+                  this.errorMessage =
+                    payment.status === 'DECLINED'
+                      ? 'El pago fue rechazado. Puedes intentar nuevamente.'
+                      : payment.status === 'VOIDED'
+                        ? 'El pago fue anulado. Verifica su estado antes de iniciar otro intento.'
+                        : 'Ocurrió un error con el pago. Verifica su estado antes de intentar nuevamente.';
+
+                  return EMPTY;
+                }
+
+                return this.subscriptionsService
+                  .getSubscription(this.subscriptionId!);
+              }),
+            );
         }),
 
         takeUntil(this.destroy$),
 
         catchError((error: unknown) => {
           console.error(
-            'Error consultando estado de suscripción:',
+            'Error consultando el estado del pago:',
             error,
           );
 
@@ -889,44 +913,28 @@ onPaymentResponseLoad(): void {
       )
       .subscribe({
         next: (response) => {
-          this.updateSubscriptionFromPolling(
-            response.data,
-          );
+          this.updateSubscriptionFromPolling(response.data);
 
-          const status = response.data.status;
-
-          if (status === 'ACTIVE') {
+          if (response.data.status === 'ACTIVE') {
             this.handlePaymentApproved();
-
-            return;
-          }
-
-          if (
-            status === 'CANCELED' ||
-            status === 'EXPIRED'
-          ) {
-            this.paymentStatus = 'DECLINED';
-            this.isWaitingForPayment = false;
-            this.isProcessing = false;
-
-            this.errorMessage =
-              'El pago no pudo ser confirmado. Puedes intentar nuevamente.';
           }
         },
 
         complete: () => {
-          if (this.paymentStatus === 'APPROVED') {
+          if (
+            this.paymentStatus === 'APPROVED' ||
+            this.paymentStatus === 'DECLINED' ||
+            this.paymentStatus === 'ERROR'
+          ) {
             return;
           }
 
-          if (this.subscription?.status === 'PENDING') {
-            this.isWaitingForPayment = false;
-            this.isProcessing = false;
-            this.paymentStatus = 'PENDING';
+          this.isWaitingForPayment = false;
+          this.isProcessing = false;
+          this.paymentStatus = 'PENDING';
 
-            this.errorMessage =
-              'El pago todavía está siendo procesado. Puedes consultar nuevamente en unos momentos.';
-          }
+          this.errorMessage =
+            'Wompi todavía no confirma el resultado. Consulta nuevamente antes de realizar otro pago.';
         },
       });
   }

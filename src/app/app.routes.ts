@@ -76,6 +76,12 @@ export const routes: Routes = [
           import('./features/auth/pages/subscription/subscription.component')
             .then(m => m.SubscriptionComponent),
       },
+      {
+        path: 'select-plan',
+        loadComponent: () =>
+          import('./features/subscriptions/pages/select-plan/select-plan.component')
+            .then(m => m.SelectPlanComponent)
+      }
     ],
   },
 
@@ -96,6 +102,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/dashboard/pages/dashboard/dashboard.component')
             .then(m => m.DashboardComponent),
+      },
+      {
+        path: 'team',
+        loadComponent: () =>
+          import('./features/admin/team/pages/team-list/team-list.component')
+            .then(m => m.TeamListComponent),
       },
     ],
   },

@@ -79,6 +79,7 @@ export interface WorkspacePlan {
  */
 export interface WorkspaceContext {
   membershipId: string;
+  organization: WorkspaceOrganization;
   restaurant: WorkspaceRestaurant;
   role: WorkspaceRole;
   permissions: string[];
@@ -96,4 +97,13 @@ export interface WorkspaceResponse {
     user: WorkspaceUser;
     workspace: WorkspaceContext;
   };
+}
+
+/**
+ * Organización a la que pertenece el workspace.
+ */
+
+export interface WorkspaceOrganization {
+  id: string;
+  name: string;
 }
