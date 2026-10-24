@@ -73,3 +73,8 @@ export interface TeamRestaurantOption {
   status: string;
 }
 
+export interface TeamRestaurantsResponse {
+  message: string;
+  data: TeamRestaurantOption[];
+}
+

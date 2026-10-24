@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 import { ApiService } from '../api/api.service';
 
@@ -19,7 +19,7 @@ import {
 export class TeamService {
   constructor(
     private readonly api: ApiService,
-  ) {}
+  ) { }
 
   private membersEndpoint(organizationId: string): string {
     return `organizations/${organizationId}/members`;
@@ -118,10 +118,15 @@ export class TeamService {
   }
 
   getRestaurants(
-  organizationId: string,
-): Observable<TeamRestaurantOption[]> {
-  return this.api.get<TeamRestaurantOption[]>(
-    `organizations/${organizationId}/restaurants`,
-  );
-}
+    organizationId: string,
+  ): Observable<TeamRestaurantOption[]> {
+    return this.api
+      .get<{
+        message: string;
+        data: TeamRestaurantOption[];
+      }>(`restaurants/organizations/${organizationId}`)
+      .pipe(
+        map((response) => response.data),
+      );
+  }
 }

@@ -228,35 +228,34 @@ export class EditMemberModalComponent implements OnInit, OnDestroy {
   // =====================================================
 
   private loadRestaurants(): void {
-    this.loadingRestaurants.set(true);
-    this.restaurantsError.set(null);
+  this.loadingRestaurants.set(true);
+  this.restaurantsError.set(null);
 
-    this.teamService
-      .getRestaurants(this.organizationId)
-      .pipe(
-        finalize(() => this.loadingRestaurants.set(false)),
-      )
-      .subscribe({
-        next: (restaurants) => {
-          this.restaurants.set(
-            restaurants.filter(
-              (restaurant) => restaurant.status === 'ACTIVE',
-            ),
-          );
-        },
+  this.teamService
+    .getRestaurants(this.organizationId)
+    .pipe(
+      finalize(() => this.loadingRestaurants.set(false)),
+    )
+    .subscribe({
+      next: (restaurants) => {
+        console.log('Restaurants loaded:', restaurants);
 
-        error: (error: unknown) => {
-          console.error(
-            'Error cargando sedes:',
-            error,
-          );
+        this.restaurants.set(
+          restaurants.filter(
+            (restaurant) => restaurant.status === 'ACTIVE',
+          ),
+        );
+      },
 
-          this.restaurantsError.set(
-            'No fue posible cargar las sedes disponibles.',
-          );
-        },
-      });
-  }
+      error: (error: unknown) => {
+        console.error('Error cargando sedes:', error);
+
+        this.restaurantsError.set(
+          'No fue posible cargar las sedes disponibles.',
+        );
+      },
+    });
+}
 
   // =====================================================
   // CARGAR ROLES
