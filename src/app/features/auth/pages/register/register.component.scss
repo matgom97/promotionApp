@@ -19,7 +19,8 @@
 .register-form-section {
   display: flex;
   justify-content: center;
-
+  height: 100vh;
+  overflow: scroll;
   min-width: 0;
   padding: var(--space-8) var(--space-7);
 }
@@ -27,6 +28,10 @@
 .register-form-container {
   width: 100%;
   max-width: 620px;
+  min-width: 0;
+  height: auto;
+  margin: 0 auto;
+  flex-shrink: 0;
 }
 
 
@@ -65,13 +70,13 @@
   object-fit: contain;
 }
 
-.register-logo > span {
+.register-logo>span {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   line-height: 1;
 }
 
-.register-logo > span > span {
+.register-logo>span>span {
   color: var(--color-primary-500);
 }
 
@@ -216,8 +221,7 @@
   color: var(--color-primary-500);
 }
 
-.register-progress__step--active
-.register-progress__step-number {
+.register-progress__step--active .register-progress__step-number {
   border-color: var(--color-primary-500);
 
   background: var(--color-primary-500);
@@ -229,8 +233,7 @@
   color: var(--color-primary-300);
 }
 
-.register-progress__step--completed
-.register-progress__step-number {
+.register-progress__step--completed .register-progress__step-number {
   border-color: var(--color-primary-800);
 
   background: var(--color-primary-300);
@@ -509,13 +512,13 @@
     border-color 0.2s ease;
 }
 
-.terms input:checked + .terms__checkbox {
+.terms input:checked+.terms__checkbox {
   border-color: var(--color-primary-500);
 
   background: var(--color-primary-500);
 }
 
-.terms input:checked + .terms__checkbox::after {
+.terms input:checked+.terms__checkbox::after {
   content: '✓';
 
   color: var(--color-text-white);
@@ -562,7 +565,7 @@
   background: var(--color-background-purple);
 }
 
-.form-info > span {
+.form-info>span {
   flex-shrink: 0;
 
   font-size: var(--font-size-lg);
@@ -656,19 +659,14 @@
   opacity: 0.7;
 
   background-image:
-    linear-gradient(
+    linear-gradient(var(--color-border-light) 1px,
+      transparent 1px),
+    linear-gradient(90deg,
       var(--color-border-light) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      90deg,
-      var(--color-border-light) 1px,
-      transparent 1px
-    );
+      transparent 1px);
 
   background-size:
-    var(--space-7)
-    var(--space-7);
+    var(--space-7) var(--space-7);
 }
 
 .location-preview__marker {
@@ -876,19 +874,20 @@
 
   display: flex;
   align-items: center;
+  justify-content: center;
 
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
 
   overflow: hidden;
 
   padding: var(--space-10);
 
-  background:
-    linear-gradient(
-      135deg,
+  background: linear-gradient(135deg,
       var(--color-primary-800),
-      var(--color-primary-500)
-    );
+      var(--color-primary-500));
 
   color: var(--color-text-white);
 }
@@ -1043,8 +1042,7 @@
 
   .register-page {
     grid-template-columns:
-      minmax(0, 1fr)
-      minmax(360px, 0.7fr);
+      minmax(0, 1fr) minmax(360px, 0.7fr);
   }
 
   .register-presentation {
@@ -1072,8 +1070,7 @@
     min-height: 100vh;
 
     padding:
-      var(--space-7)
-      var(--space-6);
+      var(--space-7) var(--space-6);
   }
 
   .register-form-container {
@@ -1095,8 +1092,7 @@
 
   .register-form-section {
     padding:
-      var(--space-6)
-      var(--space-4);
+      var(--space-6) var(--space-4);
   }
 
   .register-logo {
@@ -1138,11 +1134,10 @@
 
   .register-form-section {
     padding:
-      var(--space-5)
-      var(--space-4);
+      var(--space-5) var(--space-4);
   }
 
-  .register-logo > span {
+  .register-logo>span {
     font-size: var(--font-size-xl);
   }
 
@@ -1415,4 +1410,396 @@
   height: 10px;
   background: var(--color-text-white);
   border-radius: var(--radius-full);
+}
+
+/* =========================================================
+   BRANCHES SUMMARY
+   ========================================================= */
+
+.branches-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  padding: var(--space-4);
+
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+
+  background: var(--color-background-soft);
+}
+
+.branches-summary__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: var(--space-10);
+  height: var(--space-10);
+
+  flex-shrink: 0;
+
+  border-radius: var(--radius-md);
+
+  background: var(--color-primary-100);
+}
+
+.branches-summary__icon img {
+  width: 22px;
+  height: 22px;
+
+  object-fit: contain;
+}
+
+.branches-summary__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  min-width: 0;
+}
+
+.branches-summary__content strong {
+  color: var(--color-text-primary);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.branches-summary__content span {
+  color: var(--color-text-secondary);
+
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.branches-summary__counter {
+  flex-shrink: 0;
+
+  padding: var(--space-2) var(--space-3);
+
+  border-radius: var(--radius-full);
+
+  background: var(--color-background);
+
+  color: var(--color-primary-500);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+/* =========================================================
+   BRANCHES LIST
+   ========================================================= */
+
+.branches-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+
+/* =========================================================
+   BRANCH CARD
+   ========================================================= */
+
+.branch-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+
+  min-width: 0;
+
+  padding: var(--space-5);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+
+  background: var(--color-background);
+
+  box-shadow: var(--shadow-sm);
+
+  animation: registerStepIn 0.25s ease;
+}
+
+
+/* =========================================================
+   BRANCH HEADER
+   ========================================================= */
+
+.branch-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: var(--space-3);
+
+  padding-bottom: var(--space-4);
+
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.branch-card__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  min-width: 0;
+}
+
+.branch-card__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: var(--space-9);
+  height: var(--space-9);
+
+  flex-shrink: 0;
+
+  border-radius: var(--radius-md);
+
+  background: var(--color-primary-100);
+
+  color: var(--color-primary-500);
+
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.branch-card__heading h3 {
+  overflow-wrap: anywhere;
+
+  margin: 0 0 var(--space-1);
+
+  color: var(--color-text-primary);
+
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.branch-card__heading p {
+  margin: 0;
+
+  color: var(--color-text-muted);
+
+  font-size: var(--font-size-xs);
+}
+
+
+/* =========================================================
+   REMOVE BRANCH
+   ========================================================= */
+
+.branch-card__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+
+  flex-shrink: 0;
+
+  padding: var(--space-2);
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+
+  background: transparent;
+
+  color: var(--color-danger);
+
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.branch-card__remove>span:first-child {
+  font-size: var(--font-size-xl);
+  line-height: 1;
+}
+
+.branch-card__remove:hover {
+  border-color: var(--color-border-light);
+
+  background: var(--color-background-soft);
+}
+
+
+/* =========================================================
+   BRANCH FIELDS GRID
+   ========================================================= */
+
+.branch-card__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: var(--space-4);
+}
+
+
+/* =========================================================
+   ADD BRANCH
+   ========================================================= */
+
+.branch-add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  width: 100%;
+  min-height: 84px;
+
+  padding: var(--space-4);
+
+  border: 1px dashed var(--color-primary-400);
+  border-radius: var(--radius-lg);
+
+  background: var(--color-background);
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.branch-add:hover:not(:disabled) {
+  border-color: var(--color-primary-500);
+
+  background: var(--color-background-purple);
+
+  transform: translateY(-1px);
+}
+
+.branch-add:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+}
+
+.branch-add__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: var(--space-9);
+  height: var(--space-9);
+
+  flex-shrink: 0;
+
+  border-radius: var(--radius-md);
+
+  background: var(--color-primary-100);
+
+  color: var(--color-primary-500);
+
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-medium);
+}
+
+.branch-add__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.branch-add__content strong {
+  color: var(--color-text-primary);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.branch-add__content small {
+  color: var(--color-text-secondary);
+
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.branch-add__arrow {
+  flex-shrink: 0;
+
+  color: var(--color-primary-500);
+
+  font-size: var(--font-size-lg);
+}
+
+
+/* =========================================================
+   REQUIRED FIELD
+   ========================================================= */
+
+.required {
+  color: var(--color-danger);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+/* =========================================================
+   BRANCH MAP
+   ========================================================= */
+
+.branch-card .location-preview {
+  width: 100%;
+  min-width: 0;
+}
+
+.branch-card .location-preview__map {
+  width: 100%;
+  min-height: 220px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 576px) {
+  .branch-card {
+    padding: var(--space-4);
+  }
+
+  .branch-card__header {
+    gap: var(--space-2);
+  }
+
+  .branch-card__remove {
+    padding: var(--space-1);
+  }
+
+  .branch-card__remove>span:last-child {
+    display: none;
+  }
+
+  .branch-card__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .branches-summary {
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .branches-summary__counter {
+    padding: var(--space-2);
+  }
+
+  .branch-card .location-preview__map {
+    min-height: 180px;
+  }
 }

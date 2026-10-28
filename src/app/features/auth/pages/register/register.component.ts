@@ -4,48 +4,63 @@ import {
   ElementRef,
   OnDestroy,
   OnInit,
-  ViewChild
+  QueryList,
+  ViewChildren,
 } from '@angular/core';
 
 import { DecimalPipe } from '@angular/common';
 
 import {
+  FormArray,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
-  Validators
+  Validators,
 } from '@angular/forms';
 
 import {
   Router,
-  RouterLink
+  RouterLink,
 } from '@angular/router';
 
-import { forkJoin } from 'rxjs';
+import {
+  forkJoin,
+  Subscription,
+} from 'rxjs';
 
 import {
   RegistrationStateService,
-  PlanCode
+  PlanCode,
 } from '../../../../core/services/auth/registration-state.service';
 
 import {
   AuthService,
-  RegisterRequest
+  RegisterRequest,
 } from '../../../../core/services/auth/auth.service';
 
 import {
-  AuthStateService
+  AuthStateService,
 } from '../../../../core/services/auth/auth-state.service';
 
 import {
   Cuisine,
-  CuisinesService
+  CuisinesService,
 } from '../../../../core/services/catalogs/cuisines/cuisines.service';
 
 import {
   PriceRange,
-  PriceRangesService
+  PriceRangesService,
 } from '../../../../core/services/catalogs/priceRange/price-range.service';
+
+import {
+  Plan,
+  PlanType,
+} from '../../../../core/models/plan.model';
+
+// Ajusta esta ruta al servicio real de tu proyecto.
+import {
+  PlansService,
+} from '../../../../core/services/plans/plans.service';
 
 import * as L from 'leaflet';
 
@@ -54,9 +69,15 @@ interface RegisterStep {
   label: string;
 }
 
-interface SelectedLocation {
-  lat: number;
-  lng: number;
+interface GeocodingResult {
+  lat: string;
+  lon: string;
+  display_name: string;
+}
+
+interface BranchMap {
+  map: L.Map;
+  marker: L.Marker;
 }
 
 @Component({
@@ -65,65 +86,68 @@ interface SelectedLocation {
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DecimalPipe
+    DecimalPipe,
   ],
   templateUrl: './register.component.html',
-  styleUrl: './register.component.scss'
+  styleUrl: './register.component.scss',
 })
 export class RegisterComponent
   implements OnInit, AfterViewInit, OnDestroy {
 
-  @ViewChild('map')
-  mapElement?: ElementRef<HTMLDivElement>;
+  @ViewChildren('branchMap', { read: ElementRef })
+  branchMapElements!: QueryList<ElementRef<HTMLDivElement>>;
 
   registerForm!: FormGroup;
 
   selectedPlan: PlanCode | null = null;
 
+  selectedPlanDetails: Plan | null = null;
+
+  plans: Plan[] = [];
+
+  /**
+   * Límite obtenido del endpoint.
+   * No se establece una cantidad fija en el frontend.
+   */
+  maxRestaurants: number | null = null;
+
   isSubmitting = false;
-
-  currentStep = 1;
-
-  totalSteps = 5;
-
-  isSearchingLocation = false;
 
   isLoadingCatalogs = false;
 
   catalogsError = false;
 
-  selectedLocation: SelectedLocation | null = null;
+  isLoadingPlanLimits = true;
 
-  private map?: L.Map;
+  planLimitError = false;
 
-  private marker?: L.Marker;
+  currentStep = 1;
 
-  steps: RegisterStep[] = [
-    {
-      number: 1,
-      label: 'Tus datos'
-    },
-    {
-      number: 2,
-      label: 'Restaurante'
-    },
-    {
-      number: 3,
-      label: 'Ubicación'
-    },
-    {
-      number: 4,
-      label: 'Información pública'
-    },
-    {
-      number: 5,
-      label: 'Cuenta'
-    }
-  ];
+  totalSteps = 5;
+
+  isSearchingBranch: number | null = null;
 
   cuisines: Cuisine[] = [];
 
   priceRanges: PriceRange[] = [];
+
+  steps: RegisterStep[] = [
+    { number: 1, label: 'Tus datos' },
+    { number: 2, label: 'Restaurante' },
+    { number: 3, label: 'Sedes' },
+    { number: 4, label: 'Información pública' },
+    { number: 5, label: 'Cuenta' },
+  ];
+
+  private readonly defaultLatitude = 10.9878;
+
+  private readonly defaultLongitude = -74.7889;
+
+  private readonly branchMaps = new Map<number, BranchMap>();
+
+  private branchMapChangesSubscription?: Subscription;
+
+  private branchMapInitializationTimer?: ReturnType<typeof setTimeout>;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -132,7 +156,8 @@ export class RegisterComponent
     private readonly authService: AuthService,
     private readonly authState: AuthStateService,
     private readonly cuisinesService: CuisinesService,
-    private readonly priceRangesService: PriceRangesService
+    private readonly priceRangesService: PriceRangesService,
+    private readonly plansService: PlansService,
   ) {}
 
   ngOnInit(): void {
@@ -142,31 +167,41 @@ export class RegisterComponent
   }
 
   ngAfterViewInit(): void {
+    this.branchMapChangesSubscription =
+      this.branchMapElements.changes.subscribe(() => {
+        if (this.currentStep === 3) {
+          this.scheduleBranchMapsInitialization();
+        }
+      });
+
     if (this.currentStep === 3) {
-      this.initializeMap();
+      this.scheduleBranchMapsInitialization();
     }
   }
 
   ngOnDestroy(): void {
-    this.map?.remove();
+    this.branchMapChangesSubscription?.unsubscribe();
+
+    if (this.branchMapInitializationTimer) {
+      clearTimeout(this.branchMapInitializationTimer);
+    }
+
+    this.destroyBranchMaps();
   }
 
-  /*
-   * ============================================================
-   * FORM
-   * ============================================================
-   */
+  // ============================================================
+  // FORMULARIO
+  // ============================================================
 
   private initializeForm(): void {
     this.registerForm = this.fb.group({
-
       name: [
         '',
         [
           Validators.required,
           Validators.minLength(2),
-          Validators.maxLength(100)
-        ]
+          Validators.maxLength(100),
+        ],
       ],
 
       restaurantName: [
@@ -174,168 +209,299 @@ export class RegisterComponent
         [
           Validators.required,
           Validators.minLength(2),
-          Validators.maxLength(150)
-        ]
+          Validators.maxLength(150),
+        ],
       ],
 
-      cuisineCode: [
-        '',
-        Validators.required
-      ],
+      cuisineCode: ['', Validators.required],
 
       description: [
         '',
-        [
-          Validators.required,
-          Validators.minLength(20),
-          Validators.maxLength(500)
-        ]
+        Validators.maxLength(500),
       ],
 
       phone: [
         '',
-        Validators.maxLength(30)
+        Validators.maxLength(30),
       ],
 
-      address: [
-        '',
-        [
-          Validators.required,
-          Validators.maxLength(255)
-        ]
-      ],
-
-      city: [
-        '',
-        [
-          Validators.required,
-          Validators.maxLength(100)
-        ]
-      ],
-
-      department: [
-        '',
-        Validators.maxLength(100)
-      ],
-
-      latitude: [
-        null
-      ],
-
-      longitude: [
-        null
-      ],
-
-      priceRangeCode: [
-        '',
-        Validators.required
-      ],
+      priceRangeCode: ['', Validators.required],
 
       website: [
         '',
-        Validators.maxLength(255)
+        Validators.maxLength(255),
       ],
 
       instagram: [
         '',
-        Validators.maxLength(100)
+        Validators.maxLength(100),
       ],
 
       facebook: [
         '',
-        Validators.maxLength(255)
+        Validators.maxLength(255),
       ],
+
+      restaurants: this.fb.array([
+        this.createRestaurantForm(),
+      ]),
 
       email: [
         '',
         [
           Validators.required,
           Validators.email,
-          Validators.maxLength(191)
-        ]
+          Validators.maxLength(191),
+        ],
       ],
 
       password: [
         '',
         [
           Validators.required,
-          Validators.minLength(8),
-          Validators.maxLength(128)
-        ]
+          Validators.minLength(12),
+          Validators.maxLength(128),
+        ],
       ],
 
       terms: [
         false,
-        Validators.requiredTrue
-      ]
+        Validators.requiredTrue,
+      ],
     });
   }
 
-  /*
-   * ============================================================
-   * PLAN
-   * ============================================================
+  get restaurants(): FormArray {
+    return this.registerForm.get('restaurants') as FormArray;
+  }
+
+  /**
+   * Indica si se puede agregar otra sede.
+   *
+   * Si el endpoint falla o el límite todavía no está cargado,
+   * no permite agregar sedes hasta conocer el límite.
    */
+  get canAddRestaurant(): boolean {
+    if (
+      this.isLoadingPlanLimits ||
+      this.planLimitError ||
+      !this.selectedPlanDetails ||
+      this.maxRestaurants === null
+    ) {
+      return false;
+    }
+
+    return this.restaurants.length < this.maxRestaurants;
+  }
+
+  get remainingRestaurants(): number {
+    if (this.maxRestaurants === null) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      this.maxRestaurants - this.restaurants.length,
+    );
+  }
+
+  get planName(): string {
+    return this.selectedPlanDetails?.name ?? '';
+  }
+
+  get planDescription(): string {
+    return this.selectedPlanDetails?.description ?? '';
+  }
+
+  private createRestaurantForm(
+    initialValues?: Partial<{
+      name: string;
+      description: string;
+      phone: string;
+      address: string;
+      city: string;
+      department: string;
+      latitude: number | null;
+      longitude: number | null;
+    }>,
+  ): FormGroup {
+    return this.fb.group({
+      name: [
+        initialValues?.name ?? '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(150),
+        ],
+      ],
+
+      description: [
+        initialValues?.description ?? '',
+        Validators.maxLength(500),
+      ],
+
+      phone: [
+        initialValues?.phone ?? '',
+        Validators.maxLength(30),
+      ],
+
+      address: [
+        initialValues?.address ?? '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(255),
+        ],
+      ],
+
+      city: [
+        initialValues?.city ?? '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(100),
+        ],
+      ],
+
+      department: [
+        initialValues?.department ?? '',
+        Validators.maxLength(100),
+      ],
+
+      latitude: [
+        initialValues?.latitude ?? null,
+      ],
+
+      longitude: [
+        initialValues?.longitude ?? null,
+      ],
+    });
+  }
+
+  addRestaurant(): void {
+    if (!this.canAddRestaurant) {
+      return;
+    }
+
+    this.restaurants.push(this.createRestaurantForm());
+
+    this.restaurants.markAsDirty();
+
+    if (this.currentStep === 3) {
+      this.scheduleBranchMapsInitialization();
+    }
+  }
+
+  removeRestaurant(index: number): void {
+    if (
+      index < 0 ||
+      index >= this.restaurants.length ||
+      this.restaurants.length <= 1
+    ) {
+      return;
+    }
+
+    this.destroyBranchMaps();
+
+    this.restaurants.removeAt(index);
+
+    this.restaurants.markAsDirty();
+
+    if (this.currentStep === 3) {
+      this.scheduleBranchMapsInitialization();
+    }
+  }
+
+  // ============================================================
+  // PLAN SELECCIONADO Y LÍMITES
+  // ============================================================
 
   private loadPlan(): void {
-    const plan =
-      this.registrationState.getSelectedPlan();
+    const planCode = this.registrationState.getSelectedPlan();
 
-    if (!plan) {
+    if (!planCode) {
       this.router.navigate(['/']);
       return;
     }
 
-    this.selectedPlan = plan;
+    this.selectedPlan = planCode;
+
+    this.loadPlanLimits(planCode);
   }
 
-  get planName(): string {
-    switch (this.selectedPlan) {
+  /**
+   * Consulta los planes desde el endpoint y obtiene el límite
+   * correspondiente al plan seleccionado.
+   */
+  private loadPlanLimits(planCode: PlanCode): void {
+    this.isLoadingPlanLimits = true;
+    this.planLimitError = false;
 
-      case 'starter':
-        return 'Starter';
+    this.maxRestaurants = null;
+    this.selectedPlanDetails = null;
 
-      case 'pro':
-        return 'Pro';
+    this.plansService.getPlans().subscribe({
+      next: (response) => {
+        this.plans = response.data;
 
-      case 'business':
-        return 'Business';
+        const plan = this.plans.find(
+          (item) => item.code === planCode,
+        );
 
-      default:
-        return '';
-    }
-  }
+        if (!plan) {
+          console.error(
+            `No se encontró el plan "${planCode}" en la respuesta del endpoint.`,
+          );
 
-  get planDescription(): string {
-    switch (this.selectedPlan) {
+          this.planLimitError = true;
+          this.isLoadingPlanLimits = false;
+          return;
+        }
 
-      case 'starter':
-        return 'Comienza gratis y crea tus primeras promociones para tu restaurante.';
+        this.selectedPlanDetails = plan;
+        this.maxRestaurants = plan.limits.maxRestaurants;
 
-      case 'pro':
-        return 'Para restaurantes que quieren crecer con herramientas avanzadas.';
+        /*
+         * En este formulario, null se trata como un límite
+         * no disponible. No se interpreta como ilimitado.
+         */
+        if (
+          this.maxRestaurants === null ||
+          !Number.isInteger(this.maxRestaurants) ||
+          this.maxRestaurants < 1
+        ) {
+          console.error(
+            'El límite maxRestaurants del plan no es válido:',
+            this.maxRestaurants,
+          );
 
-      case 'business':
-        return 'Para equipos y operaciones más grandes.';
+          this.planLimitError = true;
+        }
 
-      default:
-        return '';
-    }
+        this.isLoadingPlanLimits = false;
+      },
+
+      error: (error) => {
+        console.error(
+          'Error consultando los planes y sus límites:',
+          error,
+        );
+
+        this.maxRestaurants = null;
+        this.selectedPlanDetails = null;
+        this.planLimitError = true;
+        this.isLoadingPlanLimits = false;
+      },
+    });
   }
 
   requiresPayment(): boolean {
     return this.selectedPlan !== 'starter';
   }
 
-  /*
-   * ============================================================
-   * PLAN VALIDATION
-   * ============================================================
-   */
-
   private isValidPlanCode(
-    value: string
-  ): value is PlanCode {
+    value: string,
+  ): value is PlanType {
     return (
       value === 'starter' ||
       value === 'pro' ||
@@ -343,71 +509,50 @@ export class RegisterComponent
     );
   }
 
-  /*
-   * ============================================================
-   * CATALOGS
-   * ============================================================
-   */
+  // ============================================================
+  // CATÁLOGOS
+  // ============================================================
 
   private loadCatalogs(): void {
     this.isLoadingCatalogs = true;
     this.catalogsError = false;
 
     forkJoin({
-      cuisines:
-        this.cuisinesService.getCuisines(),
-
-      priceRanges:
-        this.priceRangesService.getPriceRanges()
+      cuisines: this.cuisinesService.getCuisines(),
+      priceRanges: this.priceRangesService.getPriceRanges(),
     }).subscribe({
       next: (response) => {
-
-        this.cuisines =
-          response.cuisines.data;
-
-        this.priceRanges =
-          response.priceRanges.data;
+        this.cuisines = response.cuisines.data;
+        this.priceRanges = response.priceRanges.data;
 
         this.isLoadingCatalogs = false;
       },
 
       error: (error) => {
-
-        console.error(
-          'Error cargando catálogos:',
-          error
-        );
+        console.error('Error cargando catálogos:', error);
 
         this.catalogsError = true;
         this.isLoadingCatalogs = false;
-      }
+      },
     });
   }
 
-  /*
-   * ============================================================
-   * STEP INFORMATION
-   * ============================================================
-   */
+  // ============================================================
+  // INFORMACIÓN DE LOS PASOS
+  // ============================================================
 
   get currentStepTitle(): string {
     switch (this.currentStep) {
-
       case 1:
         return 'Crea tu restaurante en PromoTable';
-
       case 2:
         return 'Cuéntanos sobre tu restaurante';
-
       case 3:
-        return '¿Dónde está tu restaurante?';
-
+        return 'Registra las sedes de tu restaurante';
       case 4:
         return 'Haz que te encuentren';
-
       case 5:
         return 'Casi terminamos';
-
       default:
         return 'Crea tu cuenta';
     }
@@ -415,22 +560,16 @@ export class RegisterComponent
 
   get currentStepDescription(): string {
     switch (this.currentStep) {
-
       case 1:
         return 'Comencemos con tus datos personales.';
-
       case 2:
-        return 'Cuéntanos un poco sobre el restaurante que administrarás.';
-
+        return 'Define la información general de tu organización.';
       case 3:
-        return 'Ayuda a tus clientes a encontrar fácilmente tu restaurante.';
-
+        return 'Agrega las direcciones y ubicaciones de tus sedes.';
       case 4:
-        return 'Agrega la información pública de tu restaurante.';
-
+        return 'Agrega la información pública de tu organización.';
       case 5:
-        return 'Crea tus credenciales para administrar tu restaurante.';
-
+        return 'Crea tus credenciales para administrar tus sedes.';
       default:
         return '';
     }
@@ -442,17 +581,13 @@ export class RegisterComponent
     }
 
     return Math.round(
-      ((this.currentStep - 1) /
-        (this.totalSteps - 1)) *
-      100
+      ((this.currentStep - 1) / (this.totalSteps - 1)) * 100,
     );
   }
 
-  /*
-   * ============================================================
-   * NAVIGATION
-   * ============================================================
-   */
+  // ============================================================
+  // NAVEGACIÓN
+  // ============================================================
 
   nextStep(): void {
     if (this.currentStep >= this.totalSteps) {
@@ -467,15 +602,9 @@ export class RegisterComponent
     this.currentStep++;
 
     if (this.currentStep === 3) {
-      setTimeout(() => {
-        this.initializeMap();
-      });
-    }
-
-    if (this.currentStep === 3) {
-      setTimeout(() => {
-        this.map?.invalidateSize();
-      }, 100);
+      this.scheduleBranchMapsInitialization();
+    } else {
+      this.destroyBranchMaps();
     }
   }
 
@@ -487,38 +616,22 @@ export class RegisterComponent
     this.currentStep--;
 
     if (this.currentStep === 3) {
-      setTimeout(() => {
-        this.map?.invalidateSize();
-      }, 100);
+      this.scheduleBranchMapsInitialization();
+    } else {
+      this.destroyBranchMaps();
     }
   }
 
   goToStep(step: number): void {
     if (
       step < 1 ||
-      step > this.totalSteps
+      step > this.totalSteps ||
+      step === this.currentStep
     ) {
       return;
     }
 
-    if (step === this.currentStep) {
-      return;
-    }
-
-    if (step < this.currentStep) {
-      this.currentStep = step;
-
-      if (this.currentStep === 3) {
-        setTimeout(() => {
-          this.initializeMap();
-          this.map?.invalidateSize();
-        });
-      }
-
-      return;
-    }
-
-    if (!this.isCurrentStepValid()) {
+    if (step > this.currentStep && !this.isCurrentStepValid()) {
       this.markCurrentStepAsTouched();
       return;
     }
@@ -526,50 +639,44 @@ export class RegisterComponent
     this.currentStep = step;
 
     if (this.currentStep === 3) {
-      setTimeout(() => {
-        this.initializeMap();
-        this.map?.invalidateSize();
-      });
+      this.scheduleBranchMapsInitialization();
+    } else {
+      this.destroyBranchMaps();
     }
   }
 
-  /*
-   * ============================================================
-   * VALIDATION
-   * ============================================================
-   */
+  // ============================================================
+  // VALIDACIÓN
+  // ============================================================
 
   isCurrentStepValid(): boolean {
     switch (this.currentStep) {
-
       case 1:
-        return this.isStepValid([
-          'name'
-        ]);
+        return this.isStepValid(['name']);
 
       case 2:
         return this.isStepValid([
           'restaurantName',
           'cuisineCode',
-          'description'
         ]);
 
       case 3:
-        return this.isStepValid([
-          'address',
-          'city'
-        ]);
+        return (
+          this.restaurants.valid &&
+          !this.isLoadingPlanLimits &&
+          !this.planLimitError &&
+          this.maxRestaurants !== null &&
+          this.restaurants.length <= this.maxRestaurants
+        );
 
       case 4:
-        return this.isStepValid([
-          'priceRangeCode'
-        ]);
+        return this.isStepValid(['priceRangeCode']);
 
       case 5:
         return this.isStepValid([
           'email',
           'password',
-          'terms'
+          'terms',
         ]);
 
       default:
@@ -577,312 +684,301 @@ export class RegisterComponent
     }
   }
 
-  private isStepValid(
-    fields: string[]
-  ): boolean {
-
-    return fields.every(field => {
-
-      const control =
-        this.registerForm.get(field);
-
-      return control
-        ? control.valid
-        : false;
+  private isStepValid(fields: string[]): boolean {
+    return fields.every((field) => {
+      const control = this.registerForm.get(field);
+      return control ? control.valid : false;
     });
   }
 
   private markCurrentStepAsTouched(): void {
+    switch (this.currentStep) {
+      case 1:
+        this.registerForm.get('name')?.markAsTouched();
+        break;
 
-    const fieldsByStep:
-      Record<number, string[]> = {
+      case 2:
+        this.registerForm.get('restaurantName')?.markAsTouched();
+        this.registerForm.get('cuisineCode')?.markAsTouched();
+        break;
 
-      1: [
-        'name'
-      ],
+      case 3:
+        this.restaurants.markAllAsTouched();
+        break;
 
-      2: [
-        'restaurantName',
-        'cuisineCode',
-        'description'
-      ],
+      case 4:
+        this.registerForm.get('priceRangeCode')?.markAsTouched();
+        break;
 
-      3: [
-        'address',
-        'city'
-      ],
-
-      4: [
-        'priceRangeCode'
-      ],
-
-      5: [
-        'email',
-        'password',
-        'terms'
-      ]
-    };
-
-    const fields =
-      fieldsByStep[this.currentStep] ?? [];
-
-    fields.forEach(field => {
-
-      this.registerForm
-        .get(field)
-        ?.markAsTouched();
-
-    });
+      case 5:
+        this.registerForm.get('email')?.markAsTouched();
+        this.registerForm.get('password')?.markAsTouched();
+        this.registerForm.get('terms')?.markAsTouched();
+        break;
+    }
   }
 
-  /*
-   * ============================================================
-   * MAP
-   * ============================================================
-   */
+  // ============================================================
+  // MAPAS
+  // ============================================================
 
-  private initializeMap(): void {
+  private scheduleBranchMapsInitialization(): void {
+    if (this.branchMapInitializationTimer) {
+      clearTimeout(this.branchMapInitializationTimer);
+    }
 
-    if (!this.mapElement?.nativeElement) {
+    this.branchMapInitializationTimer = setTimeout(() => {
+      this.initializeBranchMaps();
+    }, 100);
+  }
+
+  private initializeBranchMaps(): void {
+    if (this.currentStep !== 3 || !this.branchMapElements) {
       return;
     }
 
-    if (this.map) {
-      this.map.invalidateSize();
-      return;
-    }
+    this.branchMapElements.forEach((elementRef, index) => {
+      const container = elementRef.nativeElement;
 
-    const initialLatitude = 10.9878;
-    const initialLongitude = -74.7889;
-
-    this.map = L.map(
-      this.mapElement.nativeElement,
-      {
-        center: [
-          initialLatitude,
-          initialLongitude
-        ],
-        zoom: 13
+      if (this.branchMaps.has(index)) {
+        this.branchMaps.get(index)?.map.invalidateSize();
+        return;
       }
-    );
 
-    L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {
-        attribution:
-          '&copy; OpenStreetMap contributors'
+      const branch = this.restaurants.at(index);
+
+      if (!branch) {
+        return;
       }
-    ).addTo(this.map);
 
-    this.map.on(
-      'click',
-      (event: L.LeafletMouseEvent) => {
+      const latitude = this.toCoordinate(
+        branch.get('latitude')?.value,
+      );
 
-        this.setMapLocation(
+      const longitude = this.toCoordinate(
+        branch.get('longitude')?.value,
+      );
+
+      const hasCoordinates =
+        latitude !== null && longitude !== null;
+
+      const initialLatitude = hasCoordinates
+        ? latitude
+        : this.defaultLatitude;
+
+      const initialLongitude = hasCoordinates
+        ? longitude
+        : this.defaultLongitude;
+
+      const map = L.map(container, {
+        center: [initialLatitude, initialLongitude],
+        zoom: hasCoordinates ? 16 : 12,
+      });
+
+      L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
+        },
+      ).addTo(map);
+
+      const marker = L.marker(
+        [initialLatitude, initialLongitude],
+        { draggable: true },
+      ).addTo(map);
+
+      marker.on('dragend', () => {
+        const position = marker.getLatLng();
+
+        this.setBranchLocation(
+          index,
+          position.lat,
+          position.lng,
+          false,
+        );
+      });
+
+      map.on('click', (event: L.LeafletMouseEvent) => {
+        this.setBranchLocation(
+          index,
           event.latlng.lat,
-          event.latlng.lng
+          event.latlng.lng,
+        );
+      });
+
+      this.branchMaps.set(index, { map, marker });
+
+      if (hasCoordinates) {
+        this.setBranchLocation(
+          index,
+          initialLatitude,
+          initialLongitude,
+          false,
         );
       }
-    );
+
+      setTimeout(() => map.invalidateSize(), 50);
+    });
   }
 
-  private setMapLocation(
+  private setBranchLocation(
+    index: number,
     latitude: number,
-    longitude: number
+    longitude: number,
+    updateMap = true,
   ): void {
+    const branch = this.restaurants.at(index);
 
-    this.selectedLocation = {
-      lat: latitude,
-      lng: longitude
-    };
-
-    this.registerForm.patchValue({
-      latitude,
-      longitude
-    });
-
-    const position = L.latLng(
-      latitude,
-      longitude
-    );
-
-    if (this.marker) {
-
-      this.marker.setLatLng(
-        position
-      );
-
-    } else if (this.map) {
-
-      this.marker =
-        L.marker(
-          position,
-          {
-            draggable: true
-          }
-        ).addTo(this.map);
-
-      this.marker.on(
-        'dragend',
-        () => {
-
-          if (!this.marker) {
-            return;
-          }
-
-          const location =
-            this.marker.getLatLng();
-
-          this.setMapLocation(
-            location.lat,
-            location.lng
-          );
-        }
-      );
+    if (!branch) {
+      return;
     }
 
-    this.map?.setView(
-      position,
-      16
-    );
+    branch.patchValue({
+      latitude,
+      longitude,
+    });
+
+    if (updateMap) {
+      const branchMap = this.branchMaps.get(index);
+
+      if (branchMap) {
+        const position = L.latLng(latitude, longitude);
+
+        branchMap.marker.setLatLng(position);
+        branchMap.map.setView(position, 16);
+      }
+    }
   }
 
-  /*
-   * ============================================================
-   * LOCATION SEARCH
-   * ============================================================
-   */
+  private toCoordinate(value: unknown): number | null {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      return null;
+    }
 
-  searchLocation(): void {
+    const coordinate = Number(value);
 
-    const addressControl =
-      this.registerForm.get('address');
+    return Number.isFinite(coordinate)
+      ? coordinate
+      : null;
+  }
 
-    const cityControl =
-      this.registerForm.get('city');
+  private destroyBranchMaps(): void {
+    this.branchMaps.forEach(({ map }) => map.remove());
+    this.branchMaps.clear();
+  }
 
-    const departmentControl =
-      this.registerForm.get('department');
+  // ============================================================
+  // BÚSQUEDA DE UBICACIÓN
+  // ============================================================
 
-    const address =
-      addressControl?.value?.trim();
+  async searchBranchLocation(index: number): Promise<void> {
+    const branch = this.restaurants.at(index);
 
-    const city =
-      cityControl?.value?.trim();
+    if (!branch || this.isSearchingBranch !== null) {
+      return;
+    }
 
-    const department =
-      departmentControl?.value?.trim();
+    const addressControl = branch.get('address');
+    const cityControl = branch.get('city');
+    const departmentControl = branch.get('department');
 
-    if (!address) {
+    const address = String(addressControl?.value ?? '').trim();
+    const city = String(cityControl?.value ?? '').trim();
+    const department = String(
+      departmentControl?.value ?? '',
+    ).trim();
+
+    if (!address || address.length < 3) {
       addressControl?.markAsTouched();
       return;
     }
 
-    this.isSearchingLocation = true;
+    this.isSearchingBranch = index;
 
     const query = [
       address,
       city,
       department,
-      'Colombia'
-    ]
-      .filter(Boolean)
-      .join(', ');
+      'Colombia',
+    ].filter(Boolean).join(', ');
 
-    const url =
-      'https://nominatim.openstreetmap.org/search';
+    const params = new URLSearchParams({
+      q: query,
+      format: 'json',
+      limit: '1',
+      countrycodes: 'co',
+    });
 
-    const params =
-      new URLSearchParams({
-        q: query,
-        format: 'json',
-        limit: '1',
-        countrycodes: 'co'
-      });
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        },
+      );
 
-    fetch(
-      `${url}?${params.toString()}`,
-      {
-        headers: {
-          Accept:
-            'application/json'
-        }
+      if (!response.ok) {
+        throw new Error('No fue posible consultar la ubicación.');
       }
-    )
-      .then(response => {
 
-        if (!response.ok) {
-          throw new Error(
-            'No fue posible consultar la ubicación.'
-          );
-        }
+      const results =
+        await response.json() as GeocodingResult[];
 
-        return response.json();
-      })
-      .then(
-        (
-          results: Array<{
-            lat: string;
-            lon: string;
-            display_name: string;
-          }>
-        ) => {
+      if (!results.length) {
+        throw new Error('No se encontró la ubicación solicitada.');
+      }
 
-          if (!results.length) {
-            throw new Error(
-              'No se encontró la ubicación.'
-            );
-          }
+      const latitude = Number(results[0].lat);
+      const longitude = Number(results[0].lon);
 
-          const latitude =
-            Number(results[0].lat);
+      if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
+      ) {
+        throw new Error('Las coordenadas recibidas no son válidas.');
+      }
 
-          const longitude =
-            Number(results[0].lon);
+      this.setBranchLocation(
+        index,
+        latitude,
+        longitude,
+      );
 
-          if (
-            Number.isNaN(latitude) ||
-            Number.isNaN(longitude)
-          ) {
-            throw new Error(
-              'La ubicación recibida no es válida.'
-            );
-          }
+      const branchMap = this.branchMaps.get(index);
 
-          this.setMapLocation(
-            latitude,
-            longitude
-          );
+      if (branchMap) {
+        const position = L.latLng(latitude, longitude);
 
-          this.registerForm.patchValue({
-            address
-          });
-        }
-      )
-      .catch(error => {
-
-        console.error(
-          'Error buscando ubicación:',
-          error
-        );
-
-      })
-      .finally(() => {
-
-        this.isSearchingLocation =
-          false;
-
-      });
+        branchMap.marker.setLatLng(position);
+        branchMap.map.setView(position, 16);
+        branchMap.map.invalidateSize();
+      }
+    } catch (error) {
+      console.error(
+        `Error buscando ubicación de la sede ${index + 1}:`,
+        error,
+      );
+    } finally {
+      this.isSearchingBranch = null;
+    }
   }
 
-  /*
-   * ============================================================
-   * SUBMIT
-   * ============================================================
-   */
+  // ============================================================
+  // ENVÍO DEL REGISTRO
+  // ============================================================
 
   submit(): void {
-
     if (this.isSubmitting) {
       return;
     }
@@ -893,196 +989,217 @@ export class RegisterComponent
     }
 
     if (
-      this.isLoadingCatalogs ||
-      this.catalogsError
+      this.isLoadingPlanLimits ||
+      this.planLimitError ||
+      this.maxRestaurants === null
     ) {
+      this.currentStep = 3;
+      return;
+    }
+
+    if (this.isLoadingCatalogs || this.catalogsError) {
+      return;
+    }
+
+    if (
+      this.restaurants.length > this.maxRestaurants
+    ) {
+      this.currentStep = 3;
+      this.restaurants.markAllAsTouched();
       return;
     }
 
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
+
+      const firstInvalidStep = this.getFirstInvalidStep();
+
+      if (firstInvalidStep !== null) {
+        this.currentStep = firstInvalidStep;
+
+        if (firstInvalidStep === 3) {
+          this.scheduleBranchMapsInitialization();
+        }
+      }
+
       return;
     }
 
     this.isSubmitting = true;
 
-    const formValue =
-      this.registerForm.getRawValue();
+    const formValue = this.registerForm.getRawValue();
 
-    const request: RegisterRequest = {
+    const request = {
+      name: String(formValue.name).trim(),
 
-      name:
-        formValue.name,
+      email: String(formValue.email)
+        .trim()
+        .toLowerCase(),
 
-      email:
-        formValue.email,
+      password: formValue.password,
 
-      password:
-        formValue.password,
+      terms: formValue.terms,
 
-      terms:
-        formValue.terms,
-
-      restaurantName:
+      restaurantName: String(
         formValue.restaurantName,
+      ).trim(),
 
-      cuisineCode:
-        formValue.cuisineCode,
+      cuisineCode: formValue.cuisineCode,
 
       description:
-        formValue.description,
+        String(formValue.description ?? '').trim() ||
+        undefined,
 
       phone:
-        formValue.phone ||
+        String(formValue.phone ?? '').trim() ||
         undefined,
 
-      address:
-        formValue.address,
-
-      city:
-        formValue.city,
-
-      department:
-        formValue.department ||
-        undefined,
-
-      latitude:
-        formValue.latitude ??
-        undefined,
-
-      longitude:
-        formValue.longitude ??
-        undefined,
-
-      priceRangeCode:
-        formValue.priceRangeCode,
+      priceRangeCode: formValue.priceRangeCode,
 
       website:
-        formValue.website ||
+        String(formValue.website ?? '').trim() ||
         undefined,
 
       instagram:
-        formValue.instagram ||
+        String(formValue.instagram ?? '').trim() ||
         undefined,
 
       facebook:
-        formValue.facebook ||
+        String(formValue.facebook ?? '').trim() ||
         undefined,
 
-      planCode:
-        this.selectedPlan
-    };
+      planCode: this.selectedPlan,
 
-    this.authService
-      .register(request)
-      .subscribe({
+      restaurants: formValue.restaurants.map(
+        (branch: Record<string, unknown>) => ({
+          name: String(branch['name']).trim(),
 
-        next: (response) => {
+          description:
+            typeof branch['description'] === 'string' &&
+            branch['description'].trim()
+              ? branch['description'].trim()
+              : undefined,
 
-          /*
-           * El backend devuelve el plan como string.
-           *
-           * Validamos el valor antes de utilizarlo
-           * como PlanCode.
-           */
-          const planCode =
-            response.data.plan.code;
+          phone:
+            typeof branch['phone'] === 'string' &&
+            branch['phone'].trim()
+              ? branch['phone'].trim()
+              : undefined,
 
-          if (
-            !this.isValidPlanCode(
-              planCode
-            )
-          ) {
+          address: String(branch['address']).trim(),
 
+          city: String(branch['city']).trim(),
+
+          department:
+            typeof branch['department'] === 'string' &&
+            branch['department'].trim()
+              ? branch['department'].trim()
+              : undefined,
+
+          latitude:
+            this.toCoordinate(branch['latitude']) ??
+            undefined,
+
+          longitude:
+            this.toCoordinate(branch['longitude']) ??
+            undefined,
+        }),
+      ),
+    } satisfies RegisterRequest;
+
+    this.authService.register(request).subscribe({
+      next: (response) => {
+        const planCode = response.data.plan.code;
+
+        if (!this.isValidPlanCode(planCode)) {
+          console.error(
+            'El backend devolvió un plan no válido:',
+            planCode,
+          );
+
+          this.isSubmitting = false;
+          return;
+        }
+
+        this.registrationState.setSelectedPlan(planCode);
+
+        this.registrationState.setSubscriptionId(
+          response.data.subscription.id,
+        );
+
+        this.authState.reset();
+
+        this.authState.initialize().subscribe({
+          next: (authenticated) => {
+            if (!authenticated) {
+              this.isSubmitting = false;
+              return;
+            }
+
+            if (planCode === 'starter') {
+              this.registrationState.clear();
+
+              this.router.navigate(['/app/dashboard']);
+              return;
+            }
+
+            this.router.navigate(['/auth/subscription']);
+          },
+
+          error: (error) => {
             console.error(
-              'Plan recibido no válido:',
-              planCode
+              'Error inicializando la sesión:',
+              error,
             );
 
             this.isSubmitting = false;
+          },
+        });
+      },
 
-            return;
-          }
+      error: (error) => {
+        console.error(
+          'Error registrando organización y sedes:',
+          error,
+        );
 
-          this.registrationState
-            .setSelectedPlan(
-              planCode
-            );
+        this.isSubmitting = false;
+      },
+    });
+  }
 
-          this.registrationState
-            .setSubscriptionId(
-              response.data.subscription.id
-            );
+  private getFirstInvalidStep(): number | null {
+    if (!this.isStepValid(['name'])) {
+      return 1;
+    }
 
-          /*
-           * El backend ya creó las cookies
-           * HttpOnly.
-           *
-           * Recuperamos la sesión mediante
-           * GET /auth/me.
-           */
-          this.authState.reset();
+    if (!this.isStepValid([
+      'restaurantName',
+      'cuisineCode',
+    ])) {
+      return 2;
+    }
 
-          this.authState
-            .initialize()
-            .subscribe({
+    if (
+      !this.restaurants.valid ||
+      this.maxRestaurants === null ||
+      this.restaurants.length > this.maxRestaurants
+    ) {
+      return 3;
+    }
 
-              next: (
-                authenticated
-              ) => {
+    if (!this.isStepValid(['priceRangeCode'])) {
+      return 4;
+    }
 
-                if (!authenticated) {
+    if (!this.isStepValid([
+      'email',
+      'password',
+      'terms',
+    ])) {
+      return 5;
+    }
 
-                  this.isSubmitting =
-                    false;
-
-                  return;
-                }
-
-                /*
-                 * STARTER
-                 */
-                if (
-                  planCode ===
-                  'starter'
-                ) {
-
-                  this.registrationState
-                    .clear();
-
-                  this.router.navigate([
-                    '/app/dashboard'
-                  ]);
-
-                  return;
-                }
-
-                /*
-                 * PRO / BUSINESS
-                 */
-                this.router.navigate([
-                  '/auth/subscription'
-                ]);
-              },
-
-              error: () => {
-
-                this.isSubmitting =
-                  false;
-              }
-            });
-        },
-
-        error: (error) => {
-
-          console.error(
-            'Error registrando restaurante:',
-            error
-          );
-
-          this.isSubmitting =
-            false;
-        }
-      });
+    return null;
   }
 }

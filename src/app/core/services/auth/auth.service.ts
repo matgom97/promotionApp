@@ -48,31 +48,49 @@ export interface MeResponse {
 }
 
 /**
- * Datos requeridos para registrar una cuenta y un restaurante.
+ * Datos de una sede que se registra dentro de la organización.
  */
-export interface RegisterRequest {
+export interface RegisterRestaurantRequest {
   name: string;
-  email: string;
-  password: string;
-  terms: boolean;
-
-  restaurantName: string;
-  cuisineCode: string;
-  description: string;
+  description?: string;
   phone?: string;
 
   address: string;
   city: string;
   department?: string;
+
   latitude?: number;
   longitude?: number;
+}
 
+/**
+ * Datos requeridos para registrar una cuenta,
+ * una organización y sus sedes.
+ */
+export interface RegisterRequest {
+  // Datos del propietario
+  name: string;
+  email: string;
+  password: string;
+  terms: boolean;
+
+  // Información general de la organización
+  restaurantName: string;
+  cuisineCode: string;
+  description?: string;
+  phone?: string;
+
+  // Configuración comercial
   priceRangeCode: string;
+  planCode?: string;
+
+  // Información pública
   website?: string;
   instagram?: string;
   facebook?: string;
 
-  planCode?: string;
+  // Una o varias sedes
+  restaurants: RegisterRestaurantRequest[];
 }
 
 /**
